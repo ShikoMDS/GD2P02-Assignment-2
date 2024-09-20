@@ -180,6 +180,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\Instructions.cpp" />
+    <ClCompile Include="src\Level1.cpp" />
+    <ClCompile Include="src\Level2.cpp" />
+    <ClCompile Include="src\LevelSelection.cpp" />
+    <ClCompile Include="src\SceneManager.cpp" />
+    <ClCompile Include="src\TitleScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="dependencies\SFML\bin\openal32.dll">
@@ -235,6 +241,15 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\Instructions.h" />
+    <ClInclude Include="include\Level1.h" />
+    <ClInclude Include="include\Level2.h" />
+    <ClInclude Include="include\LevelSelection.h" />
+    <ClInclude Include="include\Scene.h" />
+    <ClInclude Include="include\SceneManager.h" />
+    <ClInclude Include="include\TitleScreen.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

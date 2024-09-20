@@ -18,20 +18,59 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="dependencies\SFML\bin\sfml-window-d-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-graphics-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-graphics-d-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-network-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-network-d-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-system-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-system-d-2.dll" />
-    <None Include="dependencies\SFML\bin\sfml-window-2.dll" />
+    <ClCompile Include="src\Instructions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LevelSelection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TitleScreen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Level2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SceneManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Level1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="dependencies\SFML\bin\openal32.dll" />
     <CopyFileToFolders Include="dependencies\SFML\bin\sfml-audio-2.dll" />
     <CopyFileToFolders Include="dependencies\SFML\bin\sfml-audio-d-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-graphics-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-graphics-d-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-network-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-network-d-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-system-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-system-d-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-window-2.dll" />
+    <CopyFileToFolders Include="dependencies\SFML\bin\sfml-window-d-2.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SceneManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TitleScreen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Level1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Instructions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\LevelSelection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Level2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

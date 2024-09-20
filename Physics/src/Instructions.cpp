@@ -1,101 +1,110 @@
 #include "Instructions.h"
 #include "TitleScreen.h"
 
-Instructions::Instructions(SceneManager& manager) : sceneManager(manager) {}
-
-void Instructions::init() {
-    font.loadFromFile("resources/sugar bread/Sugar Bread.otf");
-
-    // Load the background texture
-    backgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/blue_land.png");
-    backgroundSprite.setTexture(backgroundTexture);
-
-    // Instructions Title
-    instructionsTitle.setFont(font);
-    instructionsTitle.setFillColor(sf::Color::Black);
-    instructionsTitle.setString("INSTRUCTIONS");
-    instructionsTitle.setCharacterSize(80);
-    sf::FloatRect titleBounds = instructionsTitle.getLocalBounds();
-    instructionsTitle.setOrigin(titleBounds.width / 2.0f, titleBounds.height / 2.0f);
-    instructionsTitle.setPosition(800, 150);
-
-    // Instructions Text
-    instructionsText.setFont(font);
-    instructionsText.setFillColor(sf::Color::Black);
-    instructionsText.setString("- Fling projectiles to destroy enemies\n- Use the mouse to aim and shoot");
-    instructionsText.setCharacterSize(50);
-    sf::FloatRect instructionsTextBounds = instructionsText.getLocalBounds();
-    instructionsText.setOrigin(instructionsTextBounds.width / 2.0f, instructionsTextBounds.height / 2.0f);
-    instructionsText.setPosition(800, 350);
-
-    // Back Button
-    backButton.setSize(sf::Vector2f(300, 75));
-    backButton.setFillColor(sf::Color::Transparent);
-    backButton.setOutlineColor(sf::Color::Black);
-    backButton.setOutlineThickness(2.0f);
-    backButton.setPosition(650, 675);
-
-    // Center the text within the Back button
-    backText.setFont(font);
-    backText.setFillColor(sf::Color::Black);
-    backText.setString("BACK");
-    backText.setCharacterSize(50);
-    sf::FloatRect backTextBounds = backText.getLocalBounds();
-    backText.setOrigin(backTextBounds.width / 2.0f, backTextBounds.height / 2.0f + backTextBounds.top / 2.0f);  // Adjust for top offset
-    backText.setPosition(backButton.getPosition().x + backButton.getSize().x / 2.0f, backButton.getPosition().y + backButton.getSize().y / 2.0f);
+Instructions::Instructions(SceneManager& Manager) : MSceneManager(Manager)
+{
 }
 
-void Instructions::handleInput(sf::RenderWindow& window, sf::Event& event) {
-    if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+void Instructions::init()
+{
+	MFont.loadFromFile("resources/sugar bread/Sugar Bread.otf");
 
-        if (backButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));
-        }
-    }
+	MBackgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/blue_land.png");
+	MBackgroundSprite.setTexture(MBackgroundTexture);
+
+	MTitleText.setFont(MFont);
+	MTitleText.setFillColor(sf::Color::Black);
+	MTitleText.setString("INSTRUCTIONS");
+	MTitleText.setCharacterSize(80);
+	const sf::FloatRect LTitleBounds = MTitleText.getLocalBounds();
+	MTitleText.setOrigin(LTitleBounds.width / 2.0f, LTitleBounds.height / 2.0f);
+	MTitleText.setPosition(800, 150);
+
+	MInstructionsText.setFont(MFont);
+	MInstructionsText.setFillColor(sf::Color::Black);
+	MInstructionsText.setString("- Fling projectiles to destroy enemies\n- Use the mouse to aim and shoot");
+	MInstructionsText.setCharacterSize(50);
+	const sf::FloatRect LInstructionsTextBounds = MInstructionsText.getLocalBounds();
+	MInstructionsText.setOrigin(LInstructionsTextBounds.width / 2.0f, LInstructionsTextBounds.height / 2.0f);
+	MInstructionsText.setPosition(800, 350);
+
+	MBackButton.setSize(sf::Vector2f(300, 75));
+	MBackButton.setFillColor(sf::Color::Transparent);
+	MBackButton.setOutlineColor(sf::Color::Black);
+	MBackButton.setOutlineThickness(2.0f);
+	MBackButton.setPosition(650, 675);
+
+	MBackText.setFont(MFont);
+	MBackText.setFillColor(sf::Color::Black);
+	MBackText.setString("BACK");
+	MBackText.setCharacterSize(50);
+	const sf::FloatRect LBackTextBounds = MBackText.getLocalBounds();
+	MBackText.setOrigin(LBackTextBounds.width / 2.0f, LBackTextBounds.height / 2.0f + LBackTextBounds.top / 2.0f);
+	// Adjust for top offset
+	MBackText.setPosition(MBackButton.getPosition().x + MBackButton.getSize().x / 2.0f,
+	                      MBackButton.getPosition().y + MBackButton.getSize().y / 2.0f);
 }
 
-void Instructions::update(float deltaTime) {}
+void Instructions::handleInput(sf::RenderWindow& Window, sf::Event& Event)
+{
+	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
+	{
+		const sf::Vector2i LMousePos = sf::Mouse::getPosition(Window);
 
-void Instructions::draw(sf::RenderWindow& window) {
-    // Draw the background first
-    window.draw(backgroundSprite);
-
-    window.draw(instructionsTitle);
-    window.draw(instructionsText);
-    window.draw(backButton);
-    window.draw(backText);
+		if (MBackButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x), static_cast<float>(LMousePos.y)))
+		{
+			MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));
+		}
+	}
 }
 
-void Instructions::updateButtonPositions(const sf::Vector2u& windowSize) {
-    float scaleX = static_cast<float>(windowSize.x) / 1600.0f;
-    float scaleY = static_cast<float>(windowSize.y) / 900.0f;
+void Instructions::update(float DeltaTime)
+{
+}
 
-    // Scale and position the background
-    backgroundSprite.setScale(
-        static_cast<float>(windowSize.x) / backgroundTexture.getSize().x,
-        static_cast<float>(windowSize.y) / backgroundTexture.getSize().y
-    );
+void Instructions::draw(sf::RenderWindow& Window)
+{
+	// Draw the background first
+	Window.draw(MBackgroundSprite);
 
-    // Update title size and position
-    instructionsTitle.setCharacterSize(static_cast<unsigned int>(80 * scaleY));
-    sf::FloatRect titleBounds = instructionsTitle.getLocalBounds();
-    instructionsTitle.setOrigin(titleBounds.width / 2.0f, titleBounds.height / 2.0f);
-    instructionsTitle.setPosition(windowSize.x / 2.0f, 150 * scaleY);
+	Window.draw(MTitleText);
+	Window.draw(MInstructionsText);
+	Window.draw(MBackButton);
+	Window.draw(MBackText);
+}
 
-    // Update instruction text size and position
-    instructionsText.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-    sf::FloatRect instructionsTextBounds = instructionsText.getLocalBounds();
-    instructionsText.setOrigin(instructionsTextBounds.width / 2.0f, instructionsTextBounds.height / 2.0f);
-    instructionsText.setPosition(windowSize.x / 2.0f, 350 * scaleY);
+void Instructions::updateButtonPositions(const sf::Vector2u& WindowSize)
+{
+	const float LScaleX = static_cast<float>(WindowSize.x) / 1600.0f;
+	const float LScaleY = static_cast<float>(WindowSize.y) / 900.0f;
 
-    // Update back button size and position
-    backButton.setSize(sf::Vector2f(300 * scaleX, 75 * scaleY));
-    backButton.setPosition((windowSize.x / 2.0f) - (backButton.getSize().x / 2.0f), 675 * scaleY);
+	// Scale and position the background
+	MBackgroundSprite.setScale(
+		static_cast<float>(WindowSize.x) / MBackgroundTexture.getSize().x,
+		static_cast<float>(WindowSize.y) / MBackgroundTexture.getSize().y
+	);
 
-    // Update back button text size and position (moved up for centering)
-    backText.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-    sf::FloatRect backTextBounds = backText.getLocalBounds();
-    backText.setOrigin(backTextBounds.width / 2.0f, backTextBounds.height / 2.0f + backTextBounds.top);  // Adjust for top offset like in level select
-    backText.setPosition(backButton.getPosition().x + backButton.getSize().x / 2.0f, backButton.getPosition().y + backButton.getSize().y / 2.0f);
+	// Update title size and position
+	MTitleText.setCharacterSize(static_cast<unsigned int>(80 * LScaleY));
+	const sf::FloatRect LTitleBounds = MTitleText.getLocalBounds();
+	MTitleText.setOrigin(LTitleBounds.width / 2.0f, LTitleBounds.height / 2.0f);
+	MTitleText.setPosition(WindowSize.x / 2.0f, 150 * LScaleY);
+
+	// Update instruction text size and position
+	MInstructionsText.setCharacterSize(static_cast<unsigned int>(50 * LScaleY));
+	const sf::FloatRect LInstructionsTextBounds = MInstructionsText.getLocalBounds();
+	MInstructionsText.setOrigin(LInstructionsTextBounds.width / 2.0f, LInstructionsTextBounds.height / 2.0f);
+	MInstructionsText.setPosition(WindowSize.x / 2.0f, 350 * LScaleY);
+
+	// Update back button size and position
+	MBackButton.setSize(sf::Vector2f(300 * LScaleX, 75 * LScaleY));
+	MBackButton.setPosition((WindowSize.x / 2.0f) - (MBackButton.getSize().x / 2.0f), 675 * LScaleY);
+
+	// Update back button text size and position
+	MBackText.setCharacterSize(static_cast<unsigned int>(50 * LScaleY));
+	const sf::FloatRect LBackTextBounds = MBackText.getLocalBounds();
+	MBackText.setOrigin(LBackTextBounds.width / 2.0f, LBackTextBounds.height / 2.0f + LBackTextBounds.top);
+	// Adjust for top offset
+	MBackText.setPosition(MBackButton.getPosition().x + MBackButton.getSize().x / 2.0f,
+	                      MBackButton.getPosition().y + MBackButton.getSize().y / 2.0f);
 }

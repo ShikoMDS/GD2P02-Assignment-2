@@ -3,22 +3,22 @@
 #include <memory>
 
 class SceneManager {
-private:
-    std::shared_ptr<Scene> currentScene;
-
 public:
     // Sets the current scene
-    void setScene(std::shared_ptr<Scene> newScene);
+    void setScene(const std::shared_ptr<Scene>& NewScene);
 
     // Handle input for the current scene
-    void handleInput(sf::RenderWindow& window, sf::Event& event);
+    void handleInput(sf::RenderWindow& Window, sf::Event& Event) const;
 
     // Update the current scene
-    void update(float deltaTime);
+    void update(float DeltaTime) const;
 
     // Render the current scene
-    void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow& Window) const;
 
     // Returns the current scene
-    std::shared_ptr<Scene> getCurrentScene() const;
+    [[nodiscard]] std::shared_ptr<Scene> getCurrentScene() const;
+
+private:
+    std::shared_ptr<Scene> MCurrentScene;
 };

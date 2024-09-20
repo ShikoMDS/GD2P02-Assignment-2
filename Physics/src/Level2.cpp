@@ -94,8 +94,25 @@ void Level2::draw(sf::RenderWindow& window) {
     window.draw(backgroundSprite);
 
     if (isPaused) {
-        // Draw dark overlay and pause menu buttons
+        // Scale the dark overlay to cover the window size
+        darkOverlay.setSize(sf::Vector2f(static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)));
         window.draw(darkOverlay);
+
+        // Calculate scaling factors based on window size
+        float scaleX = static_cast<float>(windowSize.x) / 1600.0f;  // 1600 is the reference width
+        float scaleY = static_cast<float>(windowSize.y) / 900.0f;   // 900 is the reference height
+
+        // Update the positions and sizes of the buttons
+        resumeButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        resumeButton.setPosition(600 * scaleX, 300 * scaleY);
+
+        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        restartButton.setPosition(600 * scaleX, 400 * scaleY);
+
+        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        menuButton.setPosition(600 * scaleX, 500 * scaleY);
+
+        // Draw the pause menu buttons
         window.draw(resumeButton);
         window.draw(restartButton);
         window.draw(menuButton);

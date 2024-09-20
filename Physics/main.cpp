@@ -4,88 +4,98 @@
 
 bool isFullscreen = false;
 
-void toggleFullscreen(sf::RenderWindow& window, bool& isFullscreen) {
-    if (isFullscreen) {
-        window.create(sf::VideoMode(1600, 900), "2D Physics Game", sf::Style::Resize | sf::Style::Close);
-    }
-    else {
-        window.create(sf::VideoMode::getDesktopMode(), "2D Physics Game", sf::Style::Fullscreen);
-    }
-    isFullscreen = !isFullscreen;
+void toggleFullscreen(sf::RenderWindow& Window, bool& isFullscreen)
+{
+	if (isFullscreen)
+	{
+		Window.create(sf::VideoMode(1600, 900), "2D Physics Game", sf::Style::Resize | sf::Style::Close);
+	}
+	else
+	{
+		Window.create(sf::VideoMode::getDesktopMode(), "2D Physics Game", sf::Style::Fullscreen);
+	}
+	isFullscreen = !isFullscreen;
 }
 
-void enforceAspectRatio(sf::RenderWindow& window, const float aspectRatio) {
-    sf::Vector2u windowSize = window.getSize();  // Get the current window size
-    float currentAspectRatio = static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y);
+void enforceAspectRatio(sf::RenderWindow& Window, const float AspectRatio)
+{
+	const sf::Vector2u LWindowSize = Window.getSize(); // Get the current window size
+	const float LCurrentAspectRatio = static_cast<float>(LWindowSize.x) / static_cast<float>(LWindowSize.y);
 
-    // If the current aspect ratio does not match the desired one
-    if (currentAspectRatio > aspectRatio) {
-        // Too wide: adjust the width
-        unsigned int newWidth = static_cast<unsigned int>(windowSize.y * aspectRatio);
-        window.setSize(sf::Vector2u(newWidth, windowSize.y));
-    }
-    else if (currentAspectRatio < aspectRatio) {
-        // Too tall: adjust the height
-        unsigned int newHeight = static_cast<unsigned int>(windowSize.x / aspectRatio);
-        window.setSize(sf::Vector2u(windowSize.x, newHeight));
-    }
+	// If the current aspect ratio does not match the desired one
+	if (LCurrentAspectRatio > AspectRatio)
+	{
+		// Too wide: adjust the width
+		const unsigned int LNewWidth = static_cast<unsigned int>(LWindowSize.y * AspectRatio);
+		Window.setSize(sf::Vector2u(LNewWidth, LWindowSize.y));
+	}
+	else if (LCurrentAspectRatio < AspectRatio)
+	{
+		// Too tall: adjust the height
+		const unsigned int LNewHeight = static_cast<unsigned int>(LWindowSize.x / AspectRatio);
+		Window.setSize(sf::Vector2u(LWindowSize.x, LNewHeight));
+	}
 
-    // Adjust the view to fit the new window size
-    sf::FloatRect visibleArea(0, 0, window.getSize().x, window.getSize().y);
-    window.setView(sf::View(visibleArea));
+	// Adjust the view to fit the new window size
+	const sf::FloatRect LVisibleArea(0, 0, Window.getSize().x, Window.getSize().y);
+	Window.setView(sf::View(LVisibleArea));
 }
 
-int main() {
-    sf::RenderWindow window(sf::VideoMode(1600, 900), "2D Physics Game", sf::Style::Resize | sf::Style::Close);
+int main()
+{
+	sf::RenderWindow LWindow(sf::VideoMode(1600, 900), "2D Physics Game", sf::Style::Resize | sf::Style::Close);
 
-    // Desired aspect ratio (16:9)
-    const float aspectRatio = 16.0f / 9.0f;
+	// Desired aspect ratio (16:9)
+	constexpr float LAspectRatio = 16.0f / 9.0f;
 
-    SceneManager sceneManager;
+	SceneManager LSceneManager;
 
-    // Start with the title screen
-    sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));
+	// Start with the title screen
+	LSceneManager.setScene(std::make_shared<TitleScreen>(LSceneManager));
 
-    sf::Clock clock;
+	sf::Clock LClock;
 
-    while (window.isOpen()) {
-    	sceneManager.getCurrentScene()->updateButtonPositions(window.getSize());  // Update to current window size
+	while (LWindow.isOpen())
+	{
+		LSceneManager.getCurrentScene()->updateButtonPositions(LWindow.getSize()); // Update to current window size
 
-        sf::Event event;
-        while (window.pollEvent(event)) {
+		sf::Event LEvent;
+		while (LWindow.pollEvent(LEvent))
+		{
+			if (LEvent.type == sf::Event::Closed)
+				LWindow.close();
 
+			// Fullscreen toggle (F11)
+			if (LEvent.type == sf::Event::KeyPressed && LEvent.key.code == sf::Keyboard::F11)
+			{
+				toggleFullscreen(LWindow, isFullscreen);
+			}
 
-            if (event.type == sf::Event::Closed)
-                window.close();
+			// Enforce aspect ratio on resize
+			if (LEvent.type == sf::Event::Resized)
+			{
+				enforceAspectRatio(LWindow, LAspectRatio);
 
-            // Handle fullscreen toggle with F11
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F11) {
-                toggleFullscreen(window, isFullscreen);
-            }
+				// Recalculate positions and sizes
+				auto LCurrentScene = LSceneManager.getCurrentScene();
+				if (LCurrentScene)
+				{
+					LCurrentScene->updateButtonPositions(LWindow.getSize());
+				}
+			}
 
-            // Enforce aspect ratio on resize
-            if (event.type == sf::Event::Resized) {
-                enforceAspectRatio(window, aspectRatio);
+			// Forward event to current scene input handler
+			LSceneManager.handleInput(LWindow, LEvent);
+		}
 
-                // Recalculate positions and sizes
-                auto currentScene = sceneManager.getCurrentScene();
-                if (currentScene) {
-                    currentScene->updateButtonPositions(window.getSize());
-                }
-            }
+		float LDeltaTime = LClock.restart().asSeconds();
 
-            // Forward the event to the current scene's input handler
-            sceneManager.handleInput(window, event);
-        }
+		LSceneManager.update(LDeltaTime);
 
-        float deltaTime = clock.restart().asSeconds();
+		LWindow.clear();
+		LSceneManager.draw(LWindow);
+		LWindow.display();
+	}
 
-        sceneManager.update(deltaTime);
-
-        window.clear();
-        sceneManager.draw(window);
-        window.display();
-    }
-
-    return 0;
+	return 0;
 }

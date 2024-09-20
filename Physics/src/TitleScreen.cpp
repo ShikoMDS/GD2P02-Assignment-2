@@ -2,139 +2,155 @@
 #include "LevelSelection.h"
 #include "Instructions.h"
 
-TitleScreen::TitleScreen(SceneManager& manager) : sceneManager(manager) {}
-
-void TitleScreen::init() {
-    font.loadFromFile("resources/sugar bread/Sugar Bread.otf");
-
-    // Load the background texture
-    backgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/colored_land.png");
-    backgroundSprite.setTexture(backgroundTexture);
-
-    // Title Text
-    title.setFont(font);
-    title.setFillColor(sf::Color::Black);
-    title.setString("2D Physics Game");
-    title.setCharacterSize(80);
-    sf::FloatRect titleBounds = title.getLocalBounds();
-    title.setOrigin(titleBounds.width / 2.0f, titleBounds.height / 2.0f);
-    title.setPosition(800, 150);  // Center the title
-
-    // Play Button
-    playButton.setSize(sf::Vector2f(300, 75));
-    playButton.setFillColor(sf::Color::Transparent);
-    playButton.setOutlineColor(sf::Color::Black);
-    playButton.setOutlineThickness(2.0f);
-
-    playText.setFont(font);
-    playText.setString("PLAY");
-    playText.setCharacterSize(40);
-    playText.setFillColor(sf::Color::Black);
-
-    // Instructions Button
-    instructionsButton.setSize(sf::Vector2f(300, 75));
-    instructionsButton.setFillColor(sf::Color::Transparent);
-    instructionsButton.setOutlineColor(sf::Color::Black);
-    instructionsButton.setOutlineThickness(2.0f);
-
-    instructionsText.setFont(font);
-    instructionsText.setString("INSTRUCTIONS");
-    instructionsText.setCharacterSize(40);
-    instructionsText.setFillColor(sf::Color::Black);
-
-    // Quit Button
-    quitButton.setSize(sf::Vector2f(300, 75));
-    quitButton.setFillColor(sf::Color::Transparent);
-    quitButton.setOutlineColor(sf::Color::Black);
-    quitButton.setOutlineThickness(2.0f);
-
-    quitText.setFont(font);
-    quitText.setString("QUIT");
-    quitText.setCharacterSize(40);
-    quitText.setFillColor(sf::Color::Black);
-
-    // Update positions for the first time
-    updateButtonPositions(sf::Vector2u(1600, 900));  // Default window size
+TitleScreen::TitleScreen(SceneManager& Manager) : MSceneManager(Manager)
+{
 }
 
-void TitleScreen::handleInput(sf::RenderWindow& window, sf::Event& event) {
-    if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+void TitleScreen::init()
+{
+	MFont.loadFromFile("resources/sugar bread/Sugar Bread.otf");
 
-        if (playButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            sceneManager.setScene(std::make_shared<LevelSelection>(sceneManager));
-        }
-        else if (instructionsButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            sceneManager.setScene(std::make_shared<Instructions>(sceneManager));
-        }
-        else if (quitButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            window.close();
-        }
-    }
+	MBackgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/colored_land.png");
+	MBackgroundSprite.setTexture(MBackgroundTexture);
+
+	MTitleText.setFont(MFont);
+	MTitleText.setFillColor(sf::Color::Black);
+	MTitleText.setString("2D Physics Game");
+	MTitleText.setCharacterSize(80);
+	const sf::FloatRect LTitleBounds = MTitleText.getLocalBounds();
+	MTitleText.setOrigin(LTitleBounds.width / 2.0f, LTitleBounds.height / 2.0f);
+	MTitleText.setPosition(800, 150);
+
+	MPlayButton.setSize(sf::Vector2f(300, 75));
+	MPlayButton.setFillColor(sf::Color::Transparent);
+	MPlayButton.setOutlineColor(sf::Color::Black);
+	MPlayButton.setOutlineThickness(2.0f);
+
+	MPlayText.setFont(MFont);
+	MPlayText.setString("PLAY");
+	MPlayText.setCharacterSize(40);
+	MPlayText.setFillColor(sf::Color::Black);
+
+	MInstructionsButton.setSize(sf::Vector2f(300, 75));
+	MInstructionsButton.setFillColor(sf::Color::Transparent);
+	MInstructionsButton.setOutlineColor(sf::Color::Black);
+	MInstructionsButton.setOutlineThickness(2.0f);
+
+	MInstructionsText.setFont(MFont);
+	MInstructionsText.setString("INSTRUCTIONS");
+	MInstructionsText.setCharacterSize(40);
+	MInstructionsText.setFillColor(sf::Color::Black);
+
+	MQuitButton.setSize(sf::Vector2f(300, 75));
+	MQuitButton.setFillColor(sf::Color::Transparent);
+	MQuitButton.setOutlineColor(sf::Color::Black);
+	MQuitButton.setOutlineThickness(2.0f);
+
+	MQuitText.setFont(MFont);
+	MQuitText.setString("QUIT");
+	MQuitText.setCharacterSize(40);
+	MQuitText.setFillColor(sf::Color::Black);
+
+	// Update positions for the first time
+	updateButtonPositions(sf::Vector2u(1600, 900)); // Default window size
 }
 
-void TitleScreen::update(float deltaTime) {
-    // No updates needed for the title screen
+void TitleScreen::handleInput(sf::RenderWindow& Window, sf::Event& Event)
+{
+	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
+	{
+		const sf::Vector2i LMousePos = sf::Mouse::getPosition(Window);
+
+		if (MPlayButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x), static_cast<float>(LMousePos.y)))
+		{
+			MSceneManager.setScene(std::make_shared<LevelSelection>(MSceneManager));
+		}
+		else if (MInstructionsButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x),
+		                                                        static_cast<float>(LMousePos.y)))
+		{
+			MSceneManager.setScene(std::make_shared<Instructions>(MSceneManager));
+		}
+		else if (MQuitButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x),
+		                                                static_cast<float>(LMousePos.y)))
+		{
+			Window.close();
+		}
+	}
 }
 
-void TitleScreen::draw(sf::RenderWindow& window) {
-    // Draw the background first
-    window.draw(backgroundSprite);
-
-    // Draw title and buttons
-    window.draw(title);
-    window.draw(playButton);
-    window.draw(instructionsButton);
-    window.draw(quitButton);
-
-    // Draw the button text
-    window.draw(playText);
-    window.draw(instructionsText);
-    window.draw(quitText);
+void TitleScreen::update(float DeltaTime)
+{
+	// No updates needed for title screen
 }
 
-void TitleScreen::updateButtonPositions(const sf::Vector2u& windowSize) {
-    float scaleX = static_cast<float>(windowSize.x) / 1600.0f;
-    float scaleY = static_cast<float>(windowSize.y) / 900.0f;
+void TitleScreen::draw(sf::RenderWindow& Window)
+{
+	// Draw background first
+	Window.draw(MBackgroundSprite);
 
-    // Scale and position the background
-    backgroundSprite.setScale(
-        static_cast<float>(windowSize.x) / backgroundTexture.getSize().x,
-        static_cast<float>(windowSize.y) / backgroundTexture.getSize().y
-    );
+	// Draw title and buttons
+	Window.draw(MTitleText);
+	Window.draw(MPlayButton);
+	Window.draw(MInstructionsButton);
+	Window.draw(MQuitButton);
 
-    // Align title
-    title.setCharacterSize(static_cast<unsigned int>(80 * scaleY));  // Scaling title text
-    sf::FloatRect titleBounds = title.getLocalBounds();
-    title.setOrigin(titleBounds.width / 2.0f, titleBounds.height / 2.0f);
-    title.setPosition(windowSize.x / 2.0f, 150 * scaleY);
+	// Draw button text
+	Window.draw(MPlayText);
+	Window.draw(MInstructionsText);
+	Window.draw(MQuitText);
+}
 
-    // Set Button sizes
-    playButton.setSize(sf::Vector2f(300 * scaleX, 75 * scaleY));
-    instructionsButton.setSize(sf::Vector2f(300 * scaleX, 75 * scaleY));
-    quitButton.setSize(sf::Vector2f(300 * scaleX, 75 * scaleY));
+void TitleScreen::updateButtonPositions(const sf::Vector2u& WindowSize)
+{
+	const float LScaleX = static_cast<float>(WindowSize.x) / 1600.0f;
+	const float LScaleY = static_cast<float>(WindowSize.y) / 900.0f;
 
-    // Position Buttons
-    float buttonSpacing = 40 * scaleY;
-    quitButton.setPosition((windowSize.x / 2.0f) - (quitButton.getSize().x / 2.0f), 675 * scaleY);
-    instructionsButton.setPosition((windowSize.x / 2.0f) - (instructionsButton.getSize().x / 2.0f), quitButton.getPosition().y - instructionsButton.getSize().y - buttonSpacing);
-    playButton.setPosition((windowSize.x / 2.0f) - (playButton.getSize().x / 2.0f), instructionsButton.getPosition().y - playButton.getSize().y - buttonSpacing);
+	// Scale and position the background
+	MBackgroundSprite.setScale(
+		static_cast<float>(WindowSize.x) / MBackgroundTexture.getSize().x,
+		static_cast<float>(WindowSize.y) / MBackgroundTexture.getSize().y
+	);
 
-    // Scaling text sizes based on the window size
-    playText.setCharacterSize(static_cast<unsigned int>(40 * scaleY));
-    instructionsText.setCharacterSize(static_cast<unsigned int>(40 * scaleY));
-    quitText.setCharacterSize(static_cast<unsigned int>(40 * scaleY));
+	// Align title
+	MTitleText.setCharacterSize(static_cast<unsigned int>(80 * LScaleY)); // Scaling title text
+	const sf::FloatRect LTitleBounds = MTitleText.getLocalBounds();
+	MTitleText.setOrigin(LTitleBounds.width / 2.0f, LTitleBounds.height / 2.0f);
+	MTitleText.setPosition(WindowSize.x / 2.0f, 150 * LScaleY);
 
-    // Center text within buttons
-    sf::FloatRect playTextRect = playText.getLocalBounds();
-    playText.setOrigin(playTextRect.left + playTextRect.width / 2.0f, playTextRect.top + playTextRect.height / 2.0f);
-    playText.setPosition(playButton.getPosition().x + playButton.getSize().x / 2.0f, playButton.getPosition().y + playButton.getSize().y / 2.0f);
+	// Set Button sizes
+	MPlayButton.setSize(sf::Vector2f(300 * LScaleX, 75 * LScaleY));
+	MInstructionsButton.setSize(sf::Vector2f(300 * LScaleX, 75 * LScaleY));
+	MQuitButton.setSize(sf::Vector2f(300 * LScaleX, 75 * LScaleY));
 
-    sf::FloatRect instructionsTextRect = instructionsText.getLocalBounds();
-    instructionsText.setOrigin(instructionsTextRect.left + instructionsTextRect.width / 2.0f, instructionsTextRect.top + instructionsTextRect.height / 2.0f);
-    instructionsText.setPosition(instructionsButton.getPosition().x + instructionsButton.getSize().x / 2.0f, instructionsButton.getPosition().y + instructionsButton.getSize().y / 2.0f);
+	// Position Buttons
+	const float LButtonSpacing = 40 * LScaleY;
+	MQuitButton.setPosition((WindowSize.x / 2.0f) - (MQuitButton.getSize().x / 2.0f), 675 * LScaleY);
+	MInstructionsButton.setPosition((WindowSize.x / 2.0f) - (MInstructionsButton.getSize().x / 2.0f),
+	                                MQuitButton.getPosition().y - MInstructionsButton.getSize().y - LButtonSpacing);
+	MPlayButton.setPosition((WindowSize.x / 2.0f) - (MPlayButton.getSize().x / 2.0f),
+	                        MInstructionsButton.getPosition().y - MPlayButton.getSize().y - LButtonSpacing);
 
-    sf::FloatRect quitTextRect = quitText.getLocalBounds();
-    quitText.setOrigin(quitTextRect.left + quitTextRect.width / 2.0f, quitTextRect.top + quitTextRect.height / 2.0f);
-    quitText.setPosition(quitButton.getPosition().x + quitButton.getSize().x / 2.0f, quitButton.getPosition().y + quitButton.getSize().y / 2.0f);
+	// Scale text size based on window size
+	MPlayText.setCharacterSize(static_cast<unsigned int>(40 * LScaleY));
+	MInstructionsText.setCharacterSize(static_cast<unsigned int>(40 * LScaleY));
+	MQuitText.setCharacterSize(static_cast<unsigned int>(40 * LScaleY));
+
+	// Center text within buttons
+	const sf::FloatRect LPlayTextRect = MPlayText.getLocalBounds();
+	MPlayText.setOrigin(LPlayTextRect.left + LPlayTextRect.width / 2.0f,
+	                    LPlayTextRect.top + LPlayTextRect.height / 2.0f);
+	MPlayText.setPosition(MPlayButton.getPosition().x + MPlayButton.getSize().x / 2.0f,
+	                      MPlayButton.getPosition().y + MPlayButton.getSize().y / 2.0f);
+
+	const sf::FloatRect LInstructionsTextRect = MInstructionsText.getLocalBounds();
+	MInstructionsText.setOrigin(LInstructionsTextRect.left + LInstructionsTextRect.width / 2.0f,
+	                            LInstructionsTextRect.top + LInstructionsTextRect.height / 2.0f);
+	MInstructionsText.setPosition(MInstructionsButton.getPosition().x + MInstructionsButton.getSize().x / 2.0f,
+	                              MInstructionsButton.getPosition().y + MInstructionsButton.getSize().y / 2.0f);
+
+	const sf::FloatRect LQuitTextRect = MQuitText.getLocalBounds();
+	MQuitText.setOrigin(LQuitTextRect.left + LQuitTextRect.width / 2.0f,
+	                    LQuitTextRect.top + LQuitTextRect.height / 2.0f);
+	MQuitText.setPosition(MQuitButton.getPosition().x + MQuitButton.getSize().x / 2.0f,
+	                      MQuitButton.getPosition().y + MQuitButton.getSize().y / 2.0f);
 }

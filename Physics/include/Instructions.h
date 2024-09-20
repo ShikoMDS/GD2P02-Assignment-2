@@ -3,25 +3,23 @@
 #include "SceneManager.h"
 #include "TitleScreen.h"
 
-class Instructions : public Scene {
+class Instructions final : public Scene
+{
 public:
-    Instructions(SceneManager& manager);
+	explicit Instructions(SceneManager& Manager);
 
-    void init() override;
-    void handleInput(sf::RenderWindow& window, sf::Event& event) override;
-    void update(float deltaTime) override;
-    void draw(sf::RenderWindow& window) override;
-
-    void updateButtonPositions(const sf::Vector2u& windowSize) override;
+	void init() override;
+	void handleInput(sf::RenderWindow& Window, sf::Event& Event) override;
+	void update(float DeltaTime) override;
+	void draw(sf::RenderWindow& Window) override;
+	void updateButtonPositions(const sf::Vector2u& WindowSize) override;
 
 private:
-    sf::Font font;
-    sf::Text instructionsTitle;
-    sf::Text instructionsText;
-    sf::RectangleShape backButton;
-    sf::Text backText;
-    SceneManager& sceneManager;
+	SceneManager& MSceneManager;
 
-    sf::Texture backgroundTexture;
-    sf::Sprite backgroundSprite;
+	sf::Font MFont;
+	sf::RectangleShape MBackButton;
+	sf::Text MTitleText, MInstructionsText, MBackText;
+	sf::Texture MBackgroundTexture;
+	sf::Sprite MBackgroundSprite;
 };

@@ -4,30 +4,23 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 
-class LevelSelection : public Scene {
+class LevelSelection final : public Scene
+{
 public:
-    LevelSelection(SceneManager& manager);
+	explicit LevelSelection(SceneManager& Manager);
 
-    void init() override;
-    void handleInput(sf::RenderWindow& window, sf::Event& event) override;
-    void update(float deltaTime) override;
-    void draw(sf::RenderWindow& window) override;
-
-    void updateButtonPositions(const sf::Vector2u& windowSize) override;
+	void init() override;
+	void handleInput(sf::RenderWindow& Window, sf::Event& Event) override;
+	void update(float DeltaTime) override;
+	void draw(sf::RenderWindow& Window) override;
+	void updateButtonPositions(const sf::Vector2u& WindowSize) override;
 
 private:
-    sf::Font font;
-    sf::Text levelText;
-    sf::RectangleShape backButton;
-    sf::Text backText;
-    sf::RectangleShape level1Button;
-    sf::Text level1Text;
-    sf::RectangleShape level2Button;
-    sf::Text level2Text;
-    SceneManager& sceneManager;
+	SceneManager& MSceneManager;
 
-    sf::Texture backgroundTexture;
-    sf::Sprite backgroundSprite;
-	sf::Texture level1Texture;
-	sf::Texture level2Texture;
+	sf::Font MFont;
+	sf::Text MLevelText, MLevel1Text, MLevel2Text, MBackText;
+	sf::RectangleShape MLevel1Button, MLevel2Button, MBackButton;
+	sf::Texture MBackgroundTexture, MLevel1Texture, MLevel2Texture;
+	sf::Sprite MBackgroundSprite;
 };

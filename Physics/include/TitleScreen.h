@@ -4,18 +4,6 @@
 #include <SFML/Graphics.hpp>
 
 class TitleScreen : public Scene {
-private:
-    sf::Font font;
-    sf::Text title;
-    sf::RectangleShape playButton, instructionsButton, quitButton;
-
-    // Button labels
-    sf::Text playText;
-    sf::Text instructionsText;
-    sf::Text quitText;
-
-    SceneManager& sceneManager;
-
 public:
     TitleScreen(SceneManager& manager);
 
@@ -27,4 +15,20 @@ public:
 
     // Override updateButtonPositions to adjust button positions on window resize
     void updateButtonPositions(const sf::Vector2u& windowSize) override;
+
+private:
+    sf::Font font;
+    sf::Text title;
+    sf::RectangleShape playButton, instructionsButton, quitButton;
+
+    // Button labels
+    sf::Text playText;
+    sf::Text instructionsText;
+    sf::Text quitText;
+
+    sf::Texture backgroundTexture;
+    sf::Sprite backgroundSprite;
+
+    SceneManager& sceneManager;
+
 };

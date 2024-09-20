@@ -6,8 +6,13 @@ Instructions::Instructions(SceneManager& manager) : sceneManager(manager) {}
 void Instructions::init() {
     font.loadFromFile("resources/sugar bread/Sugar Bread.otf");
 
+    // Load the background texture
+    backgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/blue_land.png");
+    backgroundSprite.setTexture(backgroundTexture);
+
     // Instructions Title
     instructionsTitle.setFont(font);
+    instructionsTitle.setFillColor(sf::Color::Black);
     instructionsTitle.setString("INSTRUCTIONS");
     instructionsTitle.setCharacterSize(80);
     sf::FloatRect titleBounds = instructionsTitle.getLocalBounds();
@@ -16,6 +21,7 @@ void Instructions::init() {
 
     // Instructions Text
     instructionsText.setFont(font);
+    instructionsText.setFillColor(sf::Color::Black);
     instructionsText.setString("- Fling projectiles to destroy enemies\n- Use the mouse to aim and shoot");
     instructionsText.setCharacterSize(50);
     sf::FloatRect instructionsTextBounds = instructionsText.getLocalBounds();
@@ -25,12 +31,13 @@ void Instructions::init() {
     // Back Button
     backButton.setSize(sf::Vector2f(300, 75));
     backButton.setFillColor(sf::Color::Transparent);
-    backButton.setOutlineColor(sf::Color::White);
+    backButton.setOutlineColor(sf::Color::Black);
     backButton.setOutlineThickness(2.0f);
     backButton.setPosition(650, 675);
 
     // Center the text within the Back button
     backText.setFont(font);
+    backText.setFillColor(sf::Color::Black);
     backText.setString("BACK");
     backText.setCharacterSize(50);
     sf::FloatRect backTextBounds = backText.getLocalBounds();
@@ -51,6 +58,9 @@ void Instructions::handleInput(sf::RenderWindow& window, sf::Event& event) {
 void Instructions::update(float deltaTime) {}
 
 void Instructions::draw(sf::RenderWindow& window) {
+    // Draw the background first
+    window.draw(backgroundSprite);
+
     window.draw(instructionsTitle);
     window.draw(instructionsText);
     window.draw(backButton);
@@ -60,6 +70,12 @@ void Instructions::draw(sf::RenderWindow& window) {
 void Instructions::updateButtonPositions(const sf::Vector2u& windowSize) {
     float scaleX = static_cast<float>(windowSize.x) / 1600.0f;
     float scaleY = static_cast<float>(windowSize.y) / 900.0f;
+
+    // Scale and position the background
+    backgroundSprite.setScale(
+        static_cast<float>(windowSize.x) / backgroundTexture.getSize().x,
+        static_cast<float>(windowSize.y) / backgroundTexture.getSize().y
+    );
 
     // Update title size and position
     instructionsTitle.setCharacterSize(static_cast<unsigned int>(80 * scaleY));

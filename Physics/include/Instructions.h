@@ -4,14 +4,6 @@
 #include "TitleScreen.h"
 
 class Instructions : public Scene {
-private:
-    sf::Font font;
-    sf::Text instructionsTitle;
-    sf::Text instructionsText;
-    sf::RectangleShape backButton;
-    sf::Text backText;
-    SceneManager& sceneManager;
-
 public:
     Instructions(SceneManager& manager);
 
@@ -21,4 +13,15 @@ public:
     void draw(sf::RenderWindow& window) override;
 
     void updateButtonPositions(const sf::Vector2u& windowSize) override;
+
+private:
+    sf::Font font;
+    sf::Text instructionsTitle;
+    sf::Text instructionsText;
+    sf::RectangleShape backButton;
+    sf::Text backText;
+    SceneManager& sceneManager;
+
+    sf::Texture backgroundTexture;
+    sf::Sprite backgroundSprite;
 };

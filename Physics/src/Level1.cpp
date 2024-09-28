@@ -1,107 +1,121 @@
 #include "Level1.h"
-
 #include "TitleScreen.h"
 
-Level1::Level1(SceneManager& manager) : sceneManager(manager), world(b2Vec2(0.0f, 9.8f)) {}
-
-void Level1::init() {
+Level1::Level1(SceneManager& manager)
+    : world(b2Vec2(0.0f, 9.8f)),  // Set gravity for the Box2D world
+    sceneManager(manager),
+    pixelsPerMeter(100.0f)  // 100 pixels per meter for scaling
+{
     // Load the background texture
     if (!backgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/colored_desert.png")) {
-        // Handle error
+        // Handle loading error
     }
     backgroundSprite.setTexture(backgroundTexture);
 
-    // Load font for the buttons
-    if (!font.loadFromFile("resources/sugar bread/Sugar Bread.otf")) {
+    // Set background to stretch across the window size
+    sf::Vector2u windowSize(1600, 900); // Assuming the window size is locked
+    sf::Vector2u bgTextureSize = backgroundTexture.getSize();
+    backgroundSprite.setScale(
+        static_cast<float>(windowSize.x) / bgTextureSize.x,
+        static_cast<float>(windowSize.y) / bgTextureSize.y
+    );
+
+    // Load the grass texture and create the tiles
+    if (!grassTexture.loadFromFile("resources/kenney physics assets/PNG/Other/grass.png")) {
+        // Handle loading error
+    }
+
+    // Create ground tiles by tiling the grass texture across the screen width
+    for (int i = 0; i < 1600 / 70 + 1; ++i) {  // Assuming each grass tile is 70x70
+        sf::Sprite grassTile;
+        grassTile.setTexture(grassTexture);
+        grassTile.setPosition(i * 70.0f, 830.0f);  // Position at the bottom of the window
+        grassTiles.push_back(grassTile);
+    }
+
+    // Load block texture
+    if (!blockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png")) {
         // Handle error
     }
 
-    // Initialize pause menu buttons
+    // Initialize the dark overlay for pause state
+    darkOverlay.setFillColor(sf::Color(0, 0, 0, 150));  // Black overlay with transparency
+
+    // Set up buttons and font for the pause menu
+    if (!font.loadFromFile("resources/sugar bread/Sugar Bread.otf")) {
+        // Handle error
+    }
     resumeButton.setFont(font);
     resumeButton.setString("Resume");
-    resumeButton.setCharacterSize(50);
-    resumeButton.setFillColor(sf::Color::White);
-    resumeButton.setPosition(600, 300);
-
     restartButton.setFont(font);
     restartButton.setString("Restart");
-    restartButton.setCharacterSize(50);
-    restartButton.setFillColor(sf::Color::White);
-    restartButton.setPosition(600, 400);
-
     menuButton.setFont(font);
     menuButton.setString("Menu");
-    menuButton.setCharacterSize(50);
-    menuButton.setFillColor(sf::Color::White);
-    menuButton.setPosition(600, 500);
-
-    // Initialize dark overlay for pause
-    darkOverlay.setSize(sf::Vector2f(1600.0f, 900.0f));
-    darkOverlay.setFillColor(sf::Color(0, 0, 0, 150)); // Semi-transparent black
 }
 
-void Level1::togglePause() {
-    isPaused = !isPaused;
-}
+void Level1::init() {
+    // Define the ground body for Box2D
+    b2BodyDef groundBodyDef;
+    groundBodyDef.position.Set(800.0f / pixelsPerMeter, 850.0f / pixelsPerMeter);  // Box2D works in meters
+    groundBody = world.CreateBody(&groundBodyDef);
 
-void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
-    // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
-        if (!pKeyPressed) {
-            pKeyPressed = true;  // Mark the key as pressed
-            togglePause();  // Toggle pause when 'P' is pressed once
-        }
-    }
-    else {
-        pKeyPressed = false;  // Reset the flag when the key is released
-    }
+    b2PolygonShape groundBox;
+    groundBox.SetAsBox(800.0f / pixelsPerMeter, 10.0f / pixelsPerMeter);  // Half-width, half-height in meters
+    groundBody->CreateFixture(&groundBox, 0.0f);  // Static ground with zero density
 
-    if (isPaused) {
-        if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    // Define the block body
+    b2BodyDef blockBodyDef;
+    blockBodyDef.type = b2_dynamicBody;  // Dynamic body for the falling block
+    blockBodyDef.position.Set(800.0f / pixelsPerMeter, 200.0f / pixelsPerMeter);  // Centered at the top
+    blockBody = world.CreateBody(&blockBodyDef);
 
-            if (resumeButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-                togglePause();  // Resume the game
-            }
-            else if (restartButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
-            }
-            else if (menuButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Return to menu
-            }
-        }
-    }
+    b2PolygonShape blockPhysicsShape;  // Renamed to avoid conflict
+    blockPhysicsShape.SetAsBox(50.0f / pixelsPerMeter, 50.0f / pixelsPerMeter);  // 50x50 pixel block
+    b2FixtureDef blockFixtureDef;
+    blockFixtureDef.shape = &blockPhysicsShape;
+    blockFixtureDef.density = 1.0f;
+    blockFixtureDef.friction = 0.3f;
+    blockBody->CreateFixture(&blockFixtureDef);
+
+    // Set up the visual representation for the block
+    blockShape.setSize(sf::Vector2f(100.0f, 100.0f));  // 100x100 pixels
+    blockShape.setOrigin(50.0f, 50.0f);  // Set origin to center for proper rotation
+    blockShape.setTexture(&blockTexture);  // Set the texture for the block
 }
 
 void Level1::update(float deltaTime) {
     if (!isPaused) {
-        // Step the Box2D world if the game is not paused
-        world.Step(deltaTime, 6, 2);
-    }
+        world.Step(deltaTime, 8, 3);  // Update the Box2D world
 
-    // Handle win/loss conditions here
+        // Update block position and rotation
+        b2Vec2 position = blockBody->GetPosition();
+        float angle = blockBody->GetAngle();
+        blockShape.setPosition(position.x * pixelsPerMeter, position.y * pixelsPerMeter);
+        blockShape.setRotation(angle * 180.0f / 3.14159f);  // Convert radians to degrees
+    }
 }
 
 void Level1::draw(sf::RenderWindow& window) {
-    // Get the window size
-    sf::Vector2u windowSize = window.getSize();
-    sf::Vector2u textureSize = backgroundTexture.getSize();
-    float scaleX = static_cast<float>(windowSize.x) / textureSize.x;
-    float scaleY = static_cast<float>(windowSize.y) / textureSize.y;
-    backgroundSprite.setScale(scaleX, scaleY);
-    backgroundSprite.setPosition(0.0f, 0.0f);
+    // Draw background
     window.draw(backgroundSprite);
 
+    // Draw the ground tiles
+    for (const auto& tile : grassTiles) {
+        window.draw(tile);
+    }
+
+    // Draw the block
+    window.draw(blockShape);
+
     if (isPaused) {
-        // Scale the dark overlay to cover the window size
-        darkOverlay.setSize(sf::Vector2f(static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)));
+        // Draw the dark overlay and buttons
+        darkOverlay.setSize(sf::Vector2f(window.getSize().x, window.getSize().y));
         window.draw(darkOverlay);
 
-        // Calculate scaling factors based on window size
-        float scaleX = static_cast<float>(windowSize.x) / 1600.0f;  // 1600 is the reference width
-        float scaleY = static_cast<float>(windowSize.y) / 900.0f;   // 900 is the reference height
+        // Adjust button positions based on window size
+        float scaleX = static_cast<float>(window.getSize().x) / 1600.0f;
+        float scaleY = static_cast<float>(window.getSize().y) / 900.0f;
 
-        // Update the positions and sizes of the buttons
         resumeButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
         resumeButton.setPosition(600 * scaleX, 300 * scaleY);
 
@@ -111,11 +125,39 @@ void Level1::draw(sf::RenderWindow& window) {
         menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
         menuButton.setPosition(600 * scaleX, 500 * scaleY);
 
-        // Draw the pause menu buttons
+        // Draw buttons
         window.draw(resumeButton);
         window.draw(restartButton);
         window.draw(menuButton);
     }
+}
 
-    // Draw other objects in the level
+void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
+{
+    Scene::updateButtonPositions(windowSize);
+}
+
+void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
+    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::P) {
+        togglePause();  // Toggle pause when 'P' is pressed
+    }
+
+    if (isPaused) {
+        if (event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            if (resumeButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                togglePause();  // Resume the game
+            }
+            else if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+            }
+            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            }
+        }
+    }
+}
+
+void Level1::togglePause() {
+    isPaused = !isPaused;
 }

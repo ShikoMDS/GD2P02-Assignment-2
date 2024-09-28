@@ -43,7 +43,7 @@ void enforceAspectRatio(sf::RenderWindow& Window, const float AspectRatio)
 
 int main()
 {
-	sf::RenderWindow LWindow(sf::VideoMode(1600, 900), "2D Physics Game", sf::Style::Resize | sf::Style::Close);
+	sf::RenderWindow LWindow(sf::VideoMode(1600, 900), "2D Physics Game", /* --Removed because of issues with physics world-- sf::Style::Resize | */sf::Style::Close);
 
 	// Desired aspect ratio (16:9)
 	constexpr float LAspectRatio = 16.0f / 9.0f;
@@ -65,11 +65,13 @@ int main()
 			if (LEvent.type == sf::Event::Closed)
 				LWindow.close();
 
+			/* --Removed because of issues with physics world
 			// Fullscreen toggle (F11)
 			if (LEvent.type == sf::Event::KeyPressed && LEvent.key.code == sf::Keyboard::F11)
 			{
 				toggleFullscreen(LWindow, isFullscreen);
 			}
+			*/
 
 			// Enforce aspect ratio on resize
 			if (LEvent.type == sf::Event::Resized)

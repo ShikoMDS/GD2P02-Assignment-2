@@ -51,6 +51,19 @@ Level1::Level1(SceneManager& manager)
     restartButton.setString("Restart");
     menuButton.setFont(font);
     menuButton.setString("Menu");
+
+    // Load projectile texture
+    if (!projectileTexture.loadFromFile("resources/kenney animal pack redux/PNG/Round (outline)/frog.png")) {
+        // Handle loading error
+    }
+
+    // Initialize the projectile shape
+    projectileShape.setSize(sf::Vector2f(50.0f, 50.0f));  // 50x50 pixels
+    projectileShape.setOrigin(25.0f, 25.0f);
+    projectileShape.setTexture(&projectileTexture);
+
+    // Drag line setup
+    dragLine = sf::VertexArray(sf::Lines, 2);
 }
 
 void Level1::init() {
@@ -81,17 +94,38 @@ void Level1::init() {
     blockShape.setSize(sf::Vector2f(100.0f, 100.0f));  // 100x100 pixels
     blockShape.setOrigin(50.0f, 50.0f);  // Set origin to center for proper rotation
     blockShape.setTexture(&blockTexture);  // Set the texture for the block
+
+    // Define the projectile body for Box2D
+    b2BodyDef projectileBodyDef;
+    projectileBodyDef.type = b2_dynamicBody;  // Dynamic body for the projectile
+    projectileBodyDef.position.Set(200.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Positioned on the ground
+    projectileBody = world.CreateBody(&projectileBodyDef);
+
+    b2PolygonShape projectilePhysicsShape;
+    projectilePhysicsShape.SetAsBox(25.0f / pixelsPerMeter, 25.0f / pixelsPerMeter);  // 50x50 pixel projectile
+
+    b2FixtureDef projectileFixtureDef;
+    projectileFixtureDef.shape = &projectilePhysicsShape;
+    projectileFixtureDef.density = 1.0f;
+    projectileFixtureDef.friction = 0.3f;
+    projectileBody->CreateFixture(&projectileFixtureDef);
 }
 
 void Level1::update(float deltaTime) {
     if (!isPaused) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
 
-        // Update block position and rotation
+        // Update block and projectile positions and rotations
         b2Vec2 position = blockBody->GetPosition();
         float angle = blockBody->GetAngle();
         blockShape.setPosition(position.x * pixelsPerMeter, position.y * pixelsPerMeter);
-        blockShape.setRotation(angle * 180.0f / 3.14159f);  // Convert radians to degrees
+        blockShape.setRotation(angle * 180.0f / 3.14159f);
+
+        // Update the projectile
+        b2Vec2 projectilePosition = projectileBody->GetPosition();
+        float projectileAngle = projectileBody->GetAngle();
+        projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
+        projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
     }
 }
 
@@ -106,6 +140,16 @@ void Level1::draw(sf::RenderWindow& window) {
 
     // Draw the block
     window.draw(blockShape);
+
+    // Draw the projectile
+    window.draw(projectileShape);
+
+    // Draw the drag line if dragging
+    if (isDragging) {
+        for (const auto& point : trajectoryPoints) {
+            window.draw(point);
+        }
+    }
 
     if (isPaused) {
         // Draw the dark overlay and buttons
@@ -134,12 +178,28 @@ void Level1::draw(sf::RenderWindow& window) {
 
 void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
 {
-    Scene::updateButtonPositions(windowSize);
+	Scene::updateButtonPositions(windowSize);
 }
 
 void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
+    if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+        isDragging = true;
+        dragStart = sf::Vector2f(sf::Mouse::getPosition(window));
+    }
+
+    if (event.type == sf::Event::MouseMoved && isDragging) {
+        dragEnd = sf::Vector2f(sf::Mouse::getPosition(window));
+        calculateParabolicTrajectory(dragStart, dragEnd);
+    }
+
+    if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+        isDragging = false;
+        launchProjectile(dragStart, dragEnd);  // Launch the projectile
+    }
+
+    // Handle pause state
     if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::P) {
-        togglePause();  // Toggle pause when 'P' is pressed
+        togglePause();  // Toggle pause
     }
 
     if (isPaused) {
@@ -155,6 +215,50 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
                 sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
             }
         }
+    }
+}
+
+void Level1::launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end) {
+    // Calculate direction and magnitude of the launch force
+    sf::Vector2f force = start - end;
+
+    // Reduce the strength of the force applied to the projectile
+    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter); // Reduced by lowering factor to 1.5
+    projectileBody->ApplyLinearImpulseToCenter(launchForce, true);
+
+    // Clear the trajectory points after launching
+    trajectoryPoints.clear();
+}
+
+void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end) {
+    // Clear previous trajectory points
+    trajectoryPoints.clear();
+
+    // Start from the projectile's current position
+    sf::Vector2f projectilePosition = projectileShape.getPosition();
+
+    // Calculate direction and velocity, reversed to get the proper trajectory
+    sf::Vector2f direction = start - end;  // Reverse the direction so it's from mouse to projectile
+    float velocityX = (direction.x * 3.0f) / pixelsPerMeter;  // Increased by a factor of 3
+    float velocityY = (direction.y * 3.0f) / pixelsPerMeter;  // Y-axis is no longer inverted
+
+    float gravity = world.GetGravity().y;  // Get gravity from Box2D world
+
+    const int numPoints = 30;  // Number of points to simulate for the trajectory
+    const float timeStep = 0.1f;  // Time step for each point in the simulation
+
+    for (int i = 0; i < numPoints; ++i) {
+        float t = i * timeStep;
+
+        // Calculate the position of the projectile at time t
+        float x = velocityX * t;
+        float y = velocityY * t + 0.5f * gravity * t * t;
+
+        sf::CircleShape point(5.0f);  // Increased size of the point for more visibility
+        point.setFillColor(sf::Color::Red);
+        point.setPosition((projectilePosition.x / pixelsPerMeter + x) * pixelsPerMeter, (projectilePosition.y / pixelsPerMeter + y) * pixelsPerMeter);
+
+        trajectoryPoints.push_back(point);
     }
 }
 

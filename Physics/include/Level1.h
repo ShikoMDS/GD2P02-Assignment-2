@@ -6,6 +6,17 @@
 #include <vector>
 
 class Level1 : public Scene {
+public:
+    Level1(SceneManager& manager);
+
+    void init() override;                     // Initialize the level
+    void handleInput(sf::RenderWindow& window, sf::Event& event) override;  // Handle player input
+    void update(float deltaTime) override;    // Update the game objects
+    void draw(sf::RenderWindow& window) override;  // Render the game objects
+    void updateButtonPositions(const sf::Vector2u& windowSize) override;   // Update positions of UI elements based on window size
+
+    void togglePause();  // Function to toggle the pause state
+
 private:
     b2World world;              // Box2D world
     float pixelsPerMeter;        // Scaling factor for SFML pixels to Box2D meters
@@ -31,14 +42,16 @@ private:
     sf::Font font;                // Font for the buttons
     bool pKeyPressed = false;     // To track the state of the 'P' key
 
-public:
-    Level1(SceneManager& manager);
+    b2Body* projectileBody;        // Box2D body for the projectile
+    sf::Texture projectileTexture;  // Texture for the projectile character
+    sf::RectangleShape projectileShape; // SFML representation of the projectile
 
-    void init() override;                     // Initialize the level
-    void handleInput(sf::RenderWindow& window, sf::Event& event) override;  // Handle player input
-    void update(float deltaTime) override;    // Update the game objects
-    void draw(sf::RenderWindow& window) override;  // Render the game objects
-    void updateButtonPositions(const sf::Vector2u& windowSize) override;   // Update positions of UI elements based on window size
+    sf::Vector2f dragStart;         // Start position of drag
+    sf::Vector2f dragEnd;           // End position of drag
+    bool isDragging = false;        // Track if currently dragging
+    sf::VertexArray dragLine;       // Visual indicator for drag direction
+    std::vector<sf::CircleShape> trajectoryPoints; // Parabolic trajectory visualization
 
-    void togglePause();  // Function to toggle the pause state
+    void launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end);
+    void calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end);
 };

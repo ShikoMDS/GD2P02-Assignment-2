@@ -1,9 +1,11 @@
 #pragma once
 #include "Scene.h"
 #include "SceneManager.h"
+#include "TitleScreen.h"
 #include <box2d/box2d.h>
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <iostream>
 
 class Level1 : public Scene {
 public:
@@ -54,4 +56,13 @@ private:
 
     void launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end);
     void calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end);
+
+    // New declarations for the enemy
+    b2Body* enemyBody;             // Box2D body for the enemy
+    sf::Sprite enemySprite;        // SFML sprite for the enemy
+    sf::Texture enemyTexture;      // Enemy texture
+    bool isEnemyAlive = true;      // Track if the enemy is alive
+
+    void handleCollisions();       // New function to handle collision logic
+    void initEnemy();              // Initialize the enemy entity
 };

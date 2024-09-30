@@ -1,5 +1,4 @@
 #include "Level1.h"
-#include "TitleScreen.h"
 
 Level1::Level1(SceneManager& manager)
     : world(b2Vec2(0.0f, 9.8f)),  // Set gravity for the Box2D world
@@ -109,11 +108,23 @@ void Level1::init() {
     projectileFixtureDef.density = 1.0f;
     projectileFixtureDef.friction = 0.3f;
     projectileBody->CreateFixture(&projectileFixtureDef);
+
+    initEnemy();  // Initialize the enemy
 }
 
 void Level1::update(float deltaTime) {
     if (!isPaused) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
+
+        // Update the enemy's position
+        if (isEnemyAlive) {
+            b2Vec2 enemyPos = enemyBody->GetPosition();
+            enemySprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
+            enemySprite.setRotation(enemyBody->GetAngle() * 180.0f / b2_pi);
+        }
+
+        // Handle collisions and check for death
+        handleCollisions();
 
         // Update block and projectile positions and rotations
         b2Vec2 position = blockBody->GetPosition();
@@ -151,6 +162,11 @@ void Level1::draw(sf::RenderWindow& window) {
         }
     }
 
+    // Draw the enemy if alive
+    if (isEnemyAlive) {
+        window.draw(enemySprite);
+    }
+
     if (isPaused) {
         // Draw the dark overlay and buttons
         darkOverlay.setSize(sf::Vector2f(window.getSize().x, window.getSize().y));
@@ -182,27 +198,23 @@ void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
 }
 
 void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
-    if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
-        isDragging = true;
-        dragStart = sf::Vector2f(sf::Mouse::getPosition(window));
-    }
+    // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
+        if (!pKeyPressed) {
+            pKeyPressed = true;  // Mark the key as pressed
+            togglePause();  // Toggle pause when 'P' is pressed once
 
-    if (event.type == sf::Event::MouseMoved && isDragging) {
-        dragEnd = sf::Vector2f(sf::Mouse::getPosition(window));
-        calculateParabolicTrajectory(dragStart, dragEnd);
+            // Clear any input states related to dragging
+            isDragging = false;
+            trajectoryPoints.clear();
+        }
     }
-
-    if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-        isDragging = false;
-        launchProjectile(dragStart, dragEnd);  // Launch the projectile
-    }
-
-    // Handle pause state
-    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::P) {
-        togglePause();  // Toggle pause
+    else {
+        pKeyPressed = false;  // Reset the flag when the key is released
     }
 
     if (isPaused) {
+        // Handle mouse interaction only for the pause menu buttons when paused
         if (event.type == sf::Event::MouseButtonReleased) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             if (resumeButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
@@ -216,20 +228,39 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
             }
         }
     }
-}
+    else {
+        // Only allow input when the game is not paused
+        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+            isDragging = true;
+            dragStart = sf::Vector2f(sf::Mouse::getPosition(window));
+        }
 
+        if (event.type == sf::Event::MouseMoved && isDragging) {
+            dragEnd = sf::Vector2f(sf::Mouse::getPosition(window));
+            calculateParabolicTrajectory(dragStart, dragEnd);
+        }
+
+        if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+            isDragging = false;
+            launchProjectile(dragStart, dragEnd);  // Launch the projectile
+        }
+    }
+}
 void Level1::launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end) {
+    if (isPaused) {
+        return;  // Don't launch projectiles if the game is paused
+    }
+
     // Calculate direction and magnitude of the launch force
     sf::Vector2f force = start - end;
 
     // Reduce the strength of the force applied to the projectile
-    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter); // Reduced by lowering factor to 1.5
+    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter); // Reduced by lowering factor to 0.75
     projectileBody->ApplyLinearImpulseToCenter(launchForce, true);
 
     // Clear the trajectory points after launching
     trajectoryPoints.clear();
 }
-
 void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end) {
     // Clear previous trajectory points
     trajectoryPoints.clear();
@@ -264,4 +295,70 @@ void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::V
 
 void Level1::togglePause() {
     isPaused = !isPaused;
+}
+
+void Level1::handleCollisions() {
+    for (b2Contact* contact = world.GetContactList(); contact; contact = contact->GetNext()) {
+        if (contact->IsTouching()) {
+            // Get the two fixtures involved in the collision
+            b2Fixture* fixtureA = contact->GetFixtureA();
+            b2Fixture* fixtureB = contact->GetFixtureB();
+            b2Body* bodyA = fixtureA->GetBody();
+            b2Body* bodyB = fixtureB->GetBody();
+
+            // Identify if the enemy is involved
+            bool isEnemyInvolved = (bodyA == enemyBody || bodyB == enemyBody);
+            b2Body* otherBody = (bodyA == enemyBody) ? bodyB : bodyA;
+
+            if (isEnemyInvolved) {
+                // Get the velocity and mass of the other body (projectile or block)
+                float mass = otherBody->GetMass();
+                b2Vec2 velocity = otherBody->GetLinearVelocity();
+                float speed = velocity.Length();
+
+                // Define reasonable thresholds for mass and speed to kill the enemy
+                const float speedThreshold = 0.2f;  // Adjust this value based on your game dynamics
+                const float massThreshold = 1.0f;   // Adjust this for reasonable mass to kill
+
+                // If the speed or mass is greater than the threshold, the enemy dies
+                if (speed > speedThreshold || mass > massThreshold) {
+                    isEnemyAlive = false;
+                    world.DestroyBody(enemyBody);  // Destroy the enemy body
+                    std::cout << "Enemy killed by collision!" << std::endl;
+                }
+            }
+        }
+    }
+}
+
+void Level1::initEnemy() {
+    // Load enemy texture
+    if (!enemyTexture.loadFromFile("resources/kenney physics assets/PNG/Aliens/alienGreen_round.png")) {
+        // Handle loading error
+    }
+
+    // Adjust scaling to match the size you need
+    enemySprite.setTexture(enemyTexture);
+    enemySprite.setScale(1.0f, 1.0f);  // Adjust scaling if needed
+    enemySprite.setOrigin(enemySprite.getGlobalBounds().width / 2.0f, enemySprite.getGlobalBounds().height / 2.0f);
+
+    // Define the enemy body in Box2D
+    b2BodyDef enemyBodyDef;
+    enemyBodyDef.type = b2_dynamicBody;
+    enemyBodyDef.position.Set(1100.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Set position on the slope
+    enemyBody = world.CreateBody(&enemyBodyDef);
+
+    // Define the enemy shape, matching the sprite bounds
+    b2PolygonShape enemyShape;
+    enemyShape.SetAsBox((enemySprite.getGlobalBounds().width / 2.0f) / pixelsPerMeter,
+        (enemySprite.getGlobalBounds().height / 2.0f) / pixelsPerMeter);
+
+    b2FixtureDef enemyFixtureDef;
+    enemyFixtureDef.shape = &enemyShape;
+    enemyFixtureDef.density = 1.0f;
+    enemyFixtureDef.friction = 0.5f;
+    enemyBody->CreateFixture(&enemyFixtureDef);
+
+    // Set user data for collision detection later
+    enemyBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
 }

@@ -50,6 +50,9 @@ Level1::Level1(SceneManager& manager)
     restartButton.setString("Restart");
     menuButton.setFont(font);
     menuButton.setString("Menu");
+    nextLevelButton.setFont(font);  // Use the preloaded font
+    nextLevelButton.setString("Next Level");
+    nextLevelButton.setCharacterSize(50);  // Initial text size, will be scaled later
 
     // Load projectile texture
     if (!projectileTexture.loadFromFile("resources/kenney animal pack redux/PNG/Round (outline)/frog.png")) {
@@ -63,6 +66,8 @@ Level1::Level1(SceneManager& manager)
 
     // Drag line setup
     dragLine = sf::VertexArray(sf::Lines, 2);
+
+    isWin = false;
 }
 
 void Level1::init() {
@@ -110,10 +115,11 @@ void Level1::init() {
     projectileBody->CreateFixture(&projectileFixtureDef);
 
     initEnemy();  // Initialize the enemy
+
 }
 
 void Level1::update(float deltaTime) {
-    if (!isPaused) {
+    if (!isPaused && !isWin) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
 
         // Update the enemy's position
@@ -137,6 +143,11 @@ void Level1::update(float deltaTime) {
         float projectileAngle = projectileBody->GetAngle();
         projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
         projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
+
+        // Check if all enemies are dead
+        if (!isEnemyAlive) {  // Assuming this tracks the enemy state
+            isWin = true;  // Set win state
+        }
     }
 }
 
@@ -167,27 +178,83 @@ void Level1::draw(sf::RenderWindow& window) {
         window.draw(enemySprite);
     }
 
-    if (isPaused) {
-        // Draw the dark overlay and buttons
+    // Calculate scaling factors based on window size
+    float scaleX = static_cast<float>(window.getSize().x) / 1600.0f;  // 1600 is the reference width
+    float scaleY = static_cast<float>(window.getSize().y) / 900.0f;   // 900 is the reference height
+
+    // Handle win screen
+    if (isWin) {
+        // Draw dark overlay
+        darkOverlay.setSize(sf::Vector2f(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)));
+        window.draw(darkOverlay);
+
+        // "You Win" Title
+        sf::Text winText;
+        winText.setFont(font);
+        winText.setString("You Win!");
+        winText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
+        sf::FloatRect winBounds = winText.getLocalBounds();
+        winText.setOrigin(winBounds.width / 2.0f, winBounds.height / 2.0f);
+        winText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
+        window.draw(winText);
+
+        // Draw the "Next Level" button
+        nextLevelButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect nextBounds = nextLevelButton.getLocalBounds();
+        nextLevelButton.setOrigin(nextBounds.width / 2.0f, nextBounds.height / 2.0f);
+        nextLevelButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f);  // Centered under the title
+        window.draw(nextLevelButton);
+
+        // Draw the "Restart" button
+        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = restartButton.getLocalBounds();
+        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
+        window.draw(restartButton);
+
+        // Draw the "Menu" button
+        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = menuButton.getLocalBounds();
+        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
+        window.draw(menuButton);
+    }
+
+    // Handle pause screen if not on win screen
+    if (isPaused && !isWin) {
+        // Draw dark overlay
         darkOverlay.setSize(sf::Vector2f(window.getSize().x, window.getSize().y));
         window.draw(darkOverlay);
 
-        // Adjust button positions based on window size
-        float scaleX = static_cast<float>(window.getSize().x) / 1600.0f;
-        float scaleY = static_cast<float>(window.getSize().y) / 900.0f;
+        // "Paused" Title
+        sf::Text pausedText;
+        pausedText.setFont(font);
+        pausedText.setString("Paused");
+        pausedText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
+        sf::FloatRect pausedBounds = pausedText.getLocalBounds();
+        pausedText.setOrigin(pausedBounds.width / 2.0f, pausedBounds.height / 2.0f);
+        pausedText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
+        window.draw(pausedText);
 
+        // Draw the "Resume" button
         resumeButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        resumeButton.setPosition(600 * scaleX, 300 * scaleY);
-
-        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        restartButton.setPosition(600 * scaleX, 400 * scaleY);
-
-        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        menuButton.setPosition(600 * scaleX, 500 * scaleY);
-
-        // Draw buttons
+        sf::FloatRect resumeBounds = resumeButton.getLocalBounds();
+        resumeButton.setOrigin(resumeBounds.width / 2.0f, resumeBounds.height / 2.0f);
+        resumeButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f);  // Centered under the title
         window.draw(resumeButton);
+
+        // Draw the "Restart" button
+        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = restartButton.getLocalBounds();
+        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
         window.draw(restartButton);
+
+        // Draw the "Menu" button
+        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = menuButton.getLocalBounds();
+        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
         window.draw(menuButton);
     }
 }
@@ -199,7 +266,7 @@ void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
 
 void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
     // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P) && !isWin) {
         if (!pKeyPressed) {
             pKeyPressed = true;  // Mark the key as pressed
             togglePause();  // Toggle pause when 'P' is pressed once
@@ -213,7 +280,7 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
         pKeyPressed = false;  // Reset the flag when the key is released
     }
 
-    if (isPaused) {
+    if (isPaused && !isWin) {
         // Handle mouse interaction only for the pause menu buttons when paused
         if (event.type == sf::Event::MouseButtonReleased) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
@@ -228,7 +295,7 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
             }
         }
     }
-    else {
+    if (!isPaused && !isWin) {
         // Only allow input when the game is not paused
         if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
             isDragging = true;
@@ -245,7 +312,24 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
             launchProjectile(dragStart, dragEnd);  // Launch the projectile
         }
     }
+    if (isWin) {
+        if (event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            if (nextLevelButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<Level2>(sceneManager));  // Go to the next level (Level2)
+            }
+            else if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+            }
+            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            }
+        }
+    }
+
+
 }
+
 void Level1::launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end) {
     if (isPaused) {
         return;  // Don't launch projectiles if the game is paused

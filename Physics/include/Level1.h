@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "SceneManager.h"
 #include "TitleScreen.h"
+#include "Level2.h"
 #include <box2d/box2d.h>
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -65,4 +66,9 @@ private:
 
     void handleCollisions();       // New function to handle collision logic
     void initEnemy();              // Initialize the enemy entity
+
+    bool isWin;
+
+    sf::Text nextLevelButton;  // Button to transition to the next level
+
 };

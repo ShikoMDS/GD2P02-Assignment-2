@@ -68,6 +68,7 @@ Level1::Level1(SceneManager& manager)
     dragLine = sf::VertexArray(sf::Lines, 2);
 
     isWin = false;
+    isLose = false;
 }
 
 void Level1::init() {
@@ -126,8 +127,19 @@ void Level1::init() {
 }
 
 void Level1::update(float deltaTime) {
-    if (!isPaused && !isWin) {
+    if (!isPaused && !isWin && !isLose) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
+
+        // Prevent dragging or drawing a line if the projectile is launched or removed
+        if (!isProjectileLaunched && !isProjectileStopped) {
+            // Handle dragging logic for drawing the trajectory (only if the projectile has not been launched)
+            if (isDragging) {
+                calculateParabolicTrajectory(dragStart, dragEnd);
+            }
+        }
+        else {
+            isDragging = false;  // Disable dragging once the projectile is launched or stopped
+        }
 
         // Update enemy positions
         for (auto& enemy : enemies) {
@@ -135,6 +147,31 @@ void Level1::update(float deltaTime) {
                 b2Vec2 enemyPos = enemy.body->GetPosition();
                 enemy.sprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
                 enemy.sprite.setRotation(enemy.body->GetAngle() * 180.0f / b2_pi);
+            }
+        }
+
+        // Update the projectile's position
+        if (isProjectileLaunched && !isProjectileStopped) {
+            b2Vec2 velocity = projectileBody->GetLinearVelocity();
+
+            // Check if the projectile's velocity is below a threshold
+            if (velocity.Length() < 0.1f) {
+                stationaryTime += deltaTime;  // Increment the stationary timer
+            }
+            else {
+                stationaryTime = 0.0f;  // Reset the timer if the projectile moves again
+            }
+
+            // If the projectile has been stationary for more than 3 seconds, remove it
+            if (stationaryTime > 3.0f) {
+                isProjectileStopped = true;  // Mark the projectile as stopped
+                world.DestroyBody(projectileBody);  // Remove the projectile from the Box2D world
+                projectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
+
+                // Check if there are no projectiles left and trigger the lose condition
+                if (isProjectileStopped) {
+                    isLose = true;
+                }
             }
         }
 
@@ -150,10 +187,13 @@ void Level1::update(float deltaTime) {
         blockShape.setPosition(position.x * pixelsPerMeter, position.y * pixelsPerMeter);
         blockShape.setRotation(angle * 180.0f / 3.14159f);
 
-        b2Vec2 projectilePosition = projectileBody->GetPosition();
-        float projectileAngle = projectileBody->GetAngle();
-        projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
-        projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
+        // Only update the projectile position if it hasn't been removed
+        if (!isProjectileStopped) {
+            b2Vec2 projectilePosition = projectileBody->GetPosition();
+            float projectileAngle = projectileBody->GetAngle();
+            projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
+            projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
+        }
     }
 }
 
@@ -169,18 +209,20 @@ void Level1::draw(sf::RenderWindow& window) {
     // Draw the block
     window.draw(blockShape);
 
-    // Draw the projectile
-    window.draw(projectileShape);
+    // Draw the projectile if it's not removed
+    if (!isProjectileStopped) {
+        window.draw(projectileShape);
+    }
 
-    // Draw the drag line if dragging
-    if (isDragging) {
+    // Draw the drag line only if the projectile has not been launched and dragging is happening
+    if (isDragging && !isProjectileLaunched) {
         for (const auto& point : trajectoryPoints) {
             window.draw(point);
         }
     }
 
-    // Draw all enemies that are alive
-    for (const auto& enemy : enemies) {
+    // Draw the enemy if alive
+    for (auto& enemy : enemies) {
         if (enemy.isAlive) {
             window.draw(enemy.sprite);
         }
@@ -228,8 +270,38 @@ void Level1::draw(sf::RenderWindow& window) {
         window.draw(menuButton);
     }
 
+    if (isLose) {
+        // Draw dark overlay
+        darkOverlay.setSize(sf::Vector2f(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)));
+        window.draw(darkOverlay);
+
+        // "You Lose!" Title
+        sf::Text loseText;
+        loseText.setFont(font);
+        loseText.setString("You Lose!");
+        loseText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
+        sf::FloatRect loseBounds = loseText.getLocalBounds();
+        loseText.setOrigin(loseBounds.width / 2.0f, loseBounds.height / 2.0f);
+        loseText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
+        window.draw(loseText);
+
+        // Draw the "Restart" button
+        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = restartButton.getLocalBounds();
+        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
+        window.draw(restartButton);
+
+        // Draw the "Menu" button
+        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = menuButton.getLocalBounds();
+        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
+        window.draw(menuButton);
+    }
+
     // Handle pause screen if not on win screen
-    if (isPaused && !isWin) {
+    if (isPaused && !isWin && !isLose) {
         // Draw dark overlay
         darkOverlay.setSize(sf::Vector2f(window.getSize().x, window.getSize().y));
         window.draw(darkOverlay);
@@ -273,8 +345,15 @@ void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
 }
 
 void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
+
+    // DEBUG: set lose
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::L) && !isPaused && !isWin)
+    {
+        isLose = true;
+    }
+
     // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P) && !isWin) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::P) && !isWin && !isLose) {
         if (!pKeyPressed) {
             pKeyPressed = true;  // Mark the key as pressed
             togglePause();  // Toggle pause when 'P' is pressed once
@@ -288,7 +367,7 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
         pKeyPressed = false;  // Reset the flag when the key is released
     }
 
-    if (isPaused && !isWin) {
+    if (isPaused && !isWin && !isLose) {
         // Handle mouse interaction only for the pause menu buttons when paused
         if (event.type == sf::Event::MouseButtonReleased) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
@@ -303,7 +382,7 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
             }
         }
     }
-    if (!isPaused && !isWin) {
+    if (!isPaused && !isWin && !isLose) {
         // Only allow input when the game is not paused
         if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
             isDragging = true;
@@ -334,25 +413,40 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
             }
         }
     }
-
-
+    if (isLose) {
+        // Handle mouse interaction for the lose screen
+        if (event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+            }
+            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            }
+        }
+    }
 }
 
 void Level1::launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end) {
-    if (isPaused) {
-        return;  // Don't launch projectiles if the game is paused
+    if (isPaused || isWin || isLose || isProjectileLaunched) {
+        return;  // Don't launch projectiles if the game is paused, already won/lost, or the projectile is already launched
     }
 
     // Calculate direction and magnitude of the launch force
     sf::Vector2f force = start - end;
 
-    // Reduce the strength of the force applied to the projectile
-    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter); // Reduced by lowering factor to 0.75
+    // Apply force to the projectile body
+    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter);
     projectileBody->ApplyLinearImpulseToCenter(launchForce, true);
+
+    // Mark the projectile as launched
+    isProjectileLaunched = true;
+    isDragging = false;  // Disable dragging after launch
 
     // Clear the trajectory points after launching
     trajectoryPoints.clear();
 }
+
 void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end) {
     // Clear previous trajectory points
     trajectoryPoints.clear();

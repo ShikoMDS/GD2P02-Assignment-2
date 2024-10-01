@@ -77,4 +77,12 @@ private:
     void checkEnemiesAlive();      // Check if all enemies are dead
 
     sf::Texture enemyTexture;
+
+    bool isLose;               // Track if the player has lost
+
+    bool isProjectileLaunched = false;  // New flag to track if the projectile has been launched
+    bool isProjectileStopped = false;   // Flag to track if projectile has stopped moving
+
+    float stationaryTime = 0.0f;  // Track how long the projectile has been stationary
+    const float removalTimeThreshold = 3.0f;  // Time (in seconds) before removal
 };

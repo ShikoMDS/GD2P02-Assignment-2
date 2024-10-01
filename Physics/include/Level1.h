@@ -47,7 +47,7 @@ private:
 
     b2Body* projectileBody;        // Box2D body for the projectile
     sf::Texture projectileTexture;  // Texture for the projectile character
-    sf::RectangleShape projectileShape; // SFML representation of the projectile
+    sf::CircleShape projectileShape; // SFML representation of the projectile
 
     sf::Vector2f dragStart;         // Start position of drag
     sf::Vector2f dragEnd;           // End position of drag
@@ -84,5 +84,12 @@ private:
     bool isProjectileStopped = false;   // Flag to track if projectile has stopped moving
 
     float stationaryTime = 0.0f;  // Track how long the projectile has been stationary
-    const float removalTimeThreshold = 3.0f;  // Time (in seconds) before removal
+	float removalTimeThreshold = 3.0f;  // Time (in seconds) before removal
+
+    int remainingProjectiles;  // Tracks how many projectiles are left
+    void spawnProjectile();    // Function to spawn a new projectile
+
+    const float screenLeftBound = -100.0f;      // Left edge (off-screen)
+    const float screenRightBound = 1600.0f;     // Right edge (off-screen, adjust based on screen width)
+
 };

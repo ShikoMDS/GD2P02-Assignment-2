@@ -60,7 +60,7 @@ Level1::Level1(SceneManager& manager)
     }
 
     // Initialize the projectile shape
-    projectileShape.setSize(sf::Vector2f(50.0f, 50.0f));  // 50x50 pixels
+    projectileShape.setRadius(25.0f);
     projectileShape.setOrigin(25.0f, 25.0f);
     projectileShape.setTexture(&projectileTexture);
 
@@ -102,18 +102,20 @@ void Level1::init() {
 
     // Define the projectile body for Box2D
     b2BodyDef projectileBodyDef;
-    projectileBodyDef.type = b2_dynamicBody;  // Dynamic body for the projectile
-    projectileBodyDef.position.Set(200.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Positioned on the ground
+    projectileBodyDef.type = b2_dynamicBody;
+    projectileBodyDef.position.Set(200.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Set initial position in meters
     projectileBody = world.CreateBody(&projectileBodyDef);
 
-    b2PolygonShape projectilePhysicsShape;
-    projectilePhysicsShape.SetAsBox(25.0f / pixelsPerMeter, 25.0f / pixelsPerMeter);  // 50x50 pixel projectile
+    b2CircleShape projectileShapeDef;
+    projectileShapeDef.m_radius = 25.0f / pixelsPerMeter;  // Set radius (in meters)
 
     b2FixtureDef projectileFixtureDef;
-    projectileFixtureDef.shape = &projectilePhysicsShape;
+    projectileFixtureDef.shape = &projectileShapeDef;
     projectileFixtureDef.density = 1.0f;
-    projectileFixtureDef.friction = 0.3f;
+    projectileFixtureDef.friction = 0.5f;  // Set appropriate friction
+    projectileFixtureDef.restitution = 0.5f;  // Set restitution (bounciness)
     projectileBody->CreateFixture(&projectileFixtureDef);
+
 
     std::vector enemyPositions = {
     sf::Vector2f(1100.0f, 800.0f),  // First enemy position
@@ -124,22 +126,14 @@ void Level1::init() {
 
     initEnemies(enemyPositions);
 
+    remainingProjectiles = 3;  // Set the total number of projectiles to 3
+
+    spawnProjectile();  // Spawn the first projectile
 }
 
 void Level1::update(float deltaTime) {
     if (!isPaused && !isWin && !isLose) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
-
-        // Prevent dragging or drawing a line if the projectile is launched or removed
-        if (!isProjectileLaunched && !isProjectileStopped) {
-            // Handle dragging logic for drawing the trajectory (only if the projectile has not been launched)
-            if (isDragging) {
-                calculateParabolicTrajectory(dragStart, dragEnd);
-            }
-        }
-        else {
-            isDragging = false;  // Disable dragging once the projectile is launched or stopped
-        }
 
         // Update enemy positions
         for (auto& enemy : enemies) {
@@ -147,16 +141,22 @@ void Level1::update(float deltaTime) {
                 b2Vec2 enemyPos = enemy.body->GetPosition();
                 enemy.sprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
                 enemy.sprite.setRotation(enemy.body->GetAngle() * 180.0f / b2_pi);
+
+                // Check if the enemy is off the screen (only left and right)
+                if (enemyPos.x * pixelsPerMeter < screenLeftBound || enemyPos.x * pixelsPerMeter > screenRightBound) {
+                    world.DestroyBody(enemy.body);  // Remove from the world
+                    enemy.isAlive = false;  // Mark the enemy as dead
+                }
             }
         }
 
-        // Update the projectile's position
+        // Update projectile positions
         if (isProjectileLaunched && !isProjectileStopped) {
             b2Vec2 velocity = projectileBody->GetLinearVelocity();
 
             // Check if the projectile's velocity is below a threshold
             if (velocity.Length() < 0.1f) {
-                stationaryTime += deltaTime;  // Increment the stationary timer
+                stationaryTime += deltaTime;
             }
             else {
                 stationaryTime = 0.0f;  // Reset the timer if the projectile moves again
@@ -164,14 +164,19 @@ void Level1::update(float deltaTime) {
 
             // If the projectile has been stationary for more than 3 seconds, remove it
             if (stationaryTime > 3.0f) {
-                isProjectileStopped = true;  // Mark the projectile as stopped
+                isProjectileStopped = true;
+                world.DestroyBody(projectileBody);
+                projectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
+                spawnProjectile();  // Spawn the next projectile
+            }
+
+            // Check if the projectile is off the screen (only left and right)
+            b2Vec2 projectilePos = projectileBody->GetPosition();
+            if (projectilePos.x * pixelsPerMeter < screenLeftBound || projectilePos.x * pixelsPerMeter > screenRightBound) {
+                isProjectileStopped = true;
                 world.DestroyBody(projectileBody);  // Remove the projectile from the Box2D world
                 projectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
-
-                // Check if there are no projectiles left and trigger the lose condition
-                if (isProjectileStopped) {
-                    isLose = true;
-                }
+                spawnProjectile();  // Spawn the next projectile
             }
         }
 
@@ -352,6 +357,11 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
         isLose = true;
     }
 
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::R) && !isPaused && !isWin && !isLose)
+    {
+        sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+    }
+
     // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::P) && !isWin && !isLose) {
         if (!pKeyPressed) {
@@ -464,8 +474,23 @@ void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::V
     const int numPoints = 30;  // Number of points to simulate for the trajectory
     const float timeStep = 0.1f;  // Time step for each point in the simulation
 
+    bool apexReached = false;  // Flag to detect the apex
+
     for (int i = 0; i < numPoints; ++i) {
         float t = i * timeStep;
+
+        // Calculate vertical velocity at time t
+        float currentVelocityY = velocityY + gravity * t;
+
+        // Stop drawing points if the apex is reached (when vertical velocity is near zero)
+        if (currentVelocityY > 0 && !apexReached) {
+            apexReached = true;  // Mark the apex as reached and stop drawing further points
+        }
+
+        // Stop drawing the trajectory after the apex
+        if (apexReached) {
+            break;
+        }
 
         // Calculate the position of the projectile at time t
         float x = velocityX * t;
@@ -473,7 +498,8 @@ void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::V
 
         sf::CircleShape point(5.0f);  // Increased size of the point for more visibility
         point.setFillColor(sf::Color::Red);
-        point.setPosition((projectilePosition.x / pixelsPerMeter + x) * pixelsPerMeter, (projectilePosition.y / pixelsPerMeter + y) * pixelsPerMeter);
+        point.setPosition((projectilePosition.x / pixelsPerMeter + x) * pixelsPerMeter,
+            (projectilePosition.y / pixelsPerMeter + y) * pixelsPerMeter);
 
         trajectoryPoints.push_back(point);
     }
@@ -574,5 +600,38 @@ void Level1::checkEnemiesAlive() {
 
     if (allDead) {
         isWin = true;  // Trigger win condition
+    }
+}
+
+void Level1::spawnProjectile() {
+    if (remainingProjectiles > 0) {
+        // Create a new projectile
+        b2BodyDef projectileBodyDef;
+        projectileBodyDef.type = b2_dynamicBody;
+        projectileBodyDef.position.Set(100.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Starting position for each projectile
+        projectileBody = world.CreateBody(&projectileBodyDef);
+
+        // Add linear damping to slow down the projectile over time (like resistance)
+        projectileBody->SetLinearDamping(0.8f);  // Adjust this value for more/less gradual slowing
+
+        b2CircleShape projectileShapeDef;
+        projectileShapeDef.m_radius = 25.0f / pixelsPerMeter;  // Set radius of the projectile
+
+        b2FixtureDef projectileFixtureDef;
+        projectileFixtureDef.shape = &projectileShapeDef;
+        projectileFixtureDef.density = 1.0f;           // Adjust density based on mass
+        projectileFixtureDef.friction = 0.8f;          // High friction to simulate grass resistance
+        projectileFixtureDef.restitution = 0.2f;       // Low restitution for less bounce on grass
+        projectileBody->CreateFixture(&projectileFixtureDef);
+
+        // Reset projectile flags and decrease the projectile count
+        isProjectileLaunched = false;
+        isProjectileStopped = false;
+        stationaryTime = 0.0f;
+        remainingProjectiles--;
+    }
+    else {
+        // If no projectiles remain, trigger the lose condition
+        isLose = true;
     }
 }

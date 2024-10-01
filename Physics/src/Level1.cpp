@@ -1,71 +1,71 @@
 #include "Level1.h"
 
-Level1::Level1(SceneManager& manager)
-    : world(b2Vec2(0.0f, 9.8f)),  // Set gravity for the Box2D world
-    sceneManager(manager),
-    pixelsPerMeter(100.0f)  // 100 pixels per meter for scaling
+Level1::Level1(SceneManager& Manager)
+    : MWorld(b2Vec2(0.0f, 9.8f)),  // Set gravity for the Box2D world
+    MSceneManager(Manager),
+    MPixelsPerMeter(100.0f)  // 100 pixels per meter for scaling
 {
     // Load the background texture
-    if (!backgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/colored_desert.png")) {
+    if (!MBackgroundTexture.loadFromFile("resources/kenney physics assets/PNG/Backgrounds/colored_desert.png")) {
         // Handle loading error
     }
-    backgroundSprite.setTexture(backgroundTexture);
+    MBackgroundSprite.setTexture(MBackgroundTexture);
 
     // Set background to stretch across the window size
     sf::Vector2u windowSize(1600, 900); // Assuming the window size is locked
-    sf::Vector2u bgTextureSize = backgroundTexture.getSize();
-    backgroundSprite.setScale(
+    sf::Vector2u bgTextureSize = MBackgroundTexture.getSize();
+    MBackgroundSprite.setScale(
         static_cast<float>(windowSize.x) / bgTextureSize.x,
         static_cast<float>(windowSize.y) / bgTextureSize.y
     );
 
     // Load the grass texture and create the tiles
-    if (!grassTexture.loadFromFile("resources/kenney physics assets/PNG/Other/grass.png")) {
+    if (!MGrassTexture.loadFromFile("resources/kenney physics assets/PNG/Other/grass.png")) {
         // Handle loading error
     }
 
     // Create ground tiles by tiling the grass texture across the screen width
     for (int i = 0; i < 1600 / 70 + 1; ++i) {  // Assuming each grass tile is 70x70
         sf::Sprite grassTile;
-        grassTile.setTexture(grassTexture);
+        grassTile.setTexture(MGrassTexture);
         grassTile.setPosition(i * 70.0f, 830.0f);  // Position at the bottom of the window
-        grassTiles.push_back(grassTile);
+        MGrassTiles.push_back(grassTile);
     }
 
     // Load block texture
-    if (!blockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png")) {
+    if (!MBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png")) {
         // Handle error
     }
 
     // Initialize the dark overlay for pause state
-    darkOverlay.setFillColor(sf::Color(0, 0, 0, 150));  // Black overlay with transparency
+    MDarkOverlay.setFillColor(sf::Color(0, 0, 0, 150));  // Black overlay with transparency
 
     // Set up buttons and font for the pause menu
-    if (!font.loadFromFile("resources/sugar bread/Sugar Bread.otf")) {
+    if (!MFont.loadFromFile("resources/sugar bread/Sugar Bread.otf")) {
         // Handle error
     }
-    resumeButton.setFont(font);
-    resumeButton.setString("Resume");
-    restartButton.setFont(font);
-    restartButton.setString("Restart");
-    menuButton.setFont(font);
-    menuButton.setString("Menu");
-    nextLevelButton.setFont(font);  // Use the preloaded font
-    nextLevelButton.setString("Next Level");
-    nextLevelButton.setCharacterSize(50);  // Initial text size, will be scaled later
+    MResumeButton.setFont(MFont);
+    MResumeButton.setString("Resume");
+    MRestartButton.setFont(MFont);
+    MRestartButton.setString("Restart");
+    MMenuButton.setFont(MFont);
+    MMenuButton.setString("Menu");
+    MNextLevelButton.setFont(MFont);  // Use the preloaded font
+    MNextLevelButton.setString("Next Level");
+    MNextLevelButton.setCharacterSize(50);  // Initial text size, will be scaled later
 
     // Load projectile texture
-    if (!projectileTexture.loadFromFile("resources/kenney animal pack redux/PNG/Round (outline)/frog.png")) {
+    if (!MProjectileTexture.loadFromFile("resources/kenney animal pack redux/PNG/Round (outline)/frog.png")) {
         // Handle loading error
     }
 
     // Initialize the projectile shape
-    projectileShape.setRadius(25.0f);
-    projectileShape.setOrigin(25.0f, 25.0f);
-    projectileShape.setTexture(&projectileTexture);
+    MProjectileShape.setRadius(25.0f);
+    MProjectileShape.setOrigin(25.0f, 25.0f);
+    MProjectileShape.setTexture(&MProjectileTexture);
 
     // Drag line setup
-    dragLine = sf::VertexArray(sf::Lines, 2);
+    MDragLine = sf::VertexArray(sf::Lines, 2);
 
     isWin = false;
     isLose = false;
@@ -74,47 +74,47 @@ Level1::Level1(SceneManager& manager)
 void Level1::init() {
     // Define the ground body for Box2D
     b2BodyDef groundBodyDef;
-    groundBodyDef.position.Set(800.0f / pixelsPerMeter, 850.0f / pixelsPerMeter);  // Box2D works in meters
-    groundBody = world.CreateBody(&groundBodyDef);
+    groundBodyDef.position.Set(800.0f / MPixelsPerMeter, 850.0f / MPixelsPerMeter);  // Box2D works in meters
+    MGroundBody = MWorld.CreateBody(&groundBodyDef);
 
     b2PolygonShape groundBox;
-    groundBox.SetAsBox(800.0f / pixelsPerMeter, 10.0f / pixelsPerMeter);  // Half-width, half-height in meters
-    groundBody->CreateFixture(&groundBox, 0.0f);  // Static ground with zero density
+    groundBox.SetAsBox(800.0f / MPixelsPerMeter, 10.0f / MPixelsPerMeter);  // Half-width, half-height in meters
+    MGroundBody->CreateFixture(&groundBox, 0.0f);  // Static ground with zero density
 
     // Define the block body
     b2BodyDef blockBodyDef;
     blockBodyDef.type = b2_dynamicBody;  // Dynamic body for the falling block
-    blockBodyDef.position.Set(800.0f / pixelsPerMeter, 200.0f / pixelsPerMeter);  // Centered at the top
-    blockBody = world.CreateBody(&blockBodyDef);
+    blockBodyDef.position.Set(800.0f / MPixelsPerMeter, 200.0f / MPixelsPerMeter);  // Centered at the top
+    MBlockBody = MWorld.CreateBody(&blockBodyDef);
 
     b2PolygonShape blockPhysicsShape;  // Renamed to avoid conflict
-    blockPhysicsShape.SetAsBox(50.0f / pixelsPerMeter, 50.0f / pixelsPerMeter);  // 50x50 pixel block
+    blockPhysicsShape.SetAsBox(50.0f / MPixelsPerMeter, 50.0f / MPixelsPerMeter);  // 50x50 pixel block
     b2FixtureDef blockFixtureDef;
     blockFixtureDef.shape = &blockPhysicsShape;
     blockFixtureDef.density = 1.0f;
     blockFixtureDef.friction = 0.3f;
-    blockBody->CreateFixture(&blockFixtureDef);
+    MBlockBody->CreateFixture(&blockFixtureDef);
 
     // Set up the visual representation for the block
-    blockShape.setSize(sf::Vector2f(100.0f, 100.0f));  // 100x100 pixels
-    blockShape.setOrigin(50.0f, 50.0f);  // Set origin to center for proper rotation
-    blockShape.setTexture(&blockTexture);  // Set the texture for the block
+    MBlockShape.setSize(sf::Vector2f(100.0f, 100.0f));  // 100x100 pixels
+    MBlockShape.setOrigin(50.0f, 50.0f);  // Set origin to center for proper rotation
+    MBlockShape.setTexture(&MBlockTexture);  // Set the texture for the block
 
     // Define the projectile body for Box2D
     b2BodyDef projectileBodyDef;
     projectileBodyDef.type = b2_dynamicBody;
-    projectileBodyDef.position.Set(200.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Set initial position in meters
-    projectileBody = world.CreateBody(&projectileBodyDef);
+    projectileBodyDef.position.Set(200.0f / MPixelsPerMeter, 800.0f / MPixelsPerMeter);  // Set initial position in meters
+    MProjectileBody = MWorld.CreateBody(&projectileBodyDef);
 
     b2CircleShape projectileShapeDef;
-    projectileShapeDef.m_radius = 25.0f / pixelsPerMeter;  // Set radius (in meters)
+    projectileShapeDef.m_radius = 25.0f / MPixelsPerMeter;  // Set radius (in meters)
 
     b2FixtureDef projectileFixtureDef;
     projectileFixtureDef.shape = &projectileShapeDef;
     projectileFixtureDef.density = 1.0f;
     projectileFixtureDef.friction = 0.5f;  // Set appropriate friction
     projectileFixtureDef.restitution = 0.5f;  // Set restitution (bounciness)
-    projectileBody->CreateFixture(&projectileFixtureDef);
+    MProjectileBody->CreateFixture(&projectileFixtureDef);
 
 
     std::vector enemyPositions = {
@@ -126,25 +126,25 @@ void Level1::init() {
 
     initEnemies(enemyPositions);
 
-    remainingProjectiles = 3;  // Set the total number of projectiles to 3
+    MRemainingProjectiles = 3;  // Set the total number of projectiles to 3
 
     spawnProjectile();  // Spawn the first projectile
 }
 
-void Level1::update(float deltaTime) {
+void Level1::update(float DeltaTime) {
     if (!isPaused && !isWin && !isLose) {
-        world.Step(deltaTime, 8, 3);  // Update the Box2D world
+        MWorld.Step(DeltaTime, 8, 3);  // Update the Box2D world
 
         // Update enemy positions
-        for (auto& enemy : enemies) {
+        for (auto& enemy : MEnemies) {
             if (enemy.isAlive) {
-                b2Vec2 enemyPos = enemy.body->GetPosition();
-                enemy.sprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
-                enemy.sprite.setRotation(enemy.body->GetAngle() * 180.0f / b2_pi);
+                b2Vec2 enemyPos = enemy.MEnemyBody->GetPosition();
+                enemy.MEnemySprite.setPosition(enemyPos.x * MPixelsPerMeter, enemyPos.y * MPixelsPerMeter);
+                enemy.MEnemySprite.setRotation(enemy.MEnemyBody->GetAngle() * 180.0f / b2_pi);
 
                 // Check if the enemy is off the screen (only left and right)
-                if (enemyPos.x * pixelsPerMeter < screenLeftBound || enemyPos.x * pixelsPerMeter > screenRightBound) {
-                    world.DestroyBody(enemy.body);  // Remove from the world
+                if (enemyPos.x * MPixelsPerMeter < MScreenLeftBound || enemyPos.x * MPixelsPerMeter > MScreenRightBound) {
+                    MWorld.DestroyBody(enemy.MEnemyBody);  // Remove from the world
                     enemy.isAlive = false;  // Mark the enemy as dead
                 }
             }
@@ -152,30 +152,30 @@ void Level1::update(float deltaTime) {
 
         // Update projectile positions
         if (isProjectileLaunched && !isProjectileStopped) {
-            b2Vec2 velocity = projectileBody->GetLinearVelocity();
+            b2Vec2 velocity = MProjectileBody->GetLinearVelocity();
 
             // Check if the projectile's velocity is below a threshold
             if (velocity.Length() < 0.1f) {
-                stationaryTime += deltaTime;
+                MStationaryTime += DeltaTime;
             }
             else {
-                stationaryTime = 0.0f;  // Reset the timer if the projectile moves again
+                MStationaryTime = 0.0f;  // Reset the timer if the projectile moves again
             }
 
             // If the projectile has been stationary for more than 3 seconds, remove it
-            if (stationaryTime > 3.0f) {
+            if (MStationaryTime > 3.0f) {
                 isProjectileStopped = true;
-                world.DestroyBody(projectileBody);
-                projectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
+                MWorld.DestroyBody(MProjectileBody);
+                MProjectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
                 spawnProjectile();  // Spawn the next projectile
             }
 
             // Check if the projectile is off the screen (only left and right)
-            b2Vec2 projectilePos = projectileBody->GetPosition();
-            if (projectilePos.x * pixelsPerMeter < screenLeftBound || projectilePos.x * pixelsPerMeter > screenRightBound) {
+            b2Vec2 projectilePos = MProjectileBody->GetPosition();
+            if (projectilePos.x * MPixelsPerMeter < MScreenLeftBound || projectilePos.x * MPixelsPerMeter > MScreenRightBound) {
                 isProjectileStopped = true;
-                world.DestroyBody(projectileBody);  // Remove the projectile from the Box2D world
-                projectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
+                MWorld.DestroyBody(MProjectileBody);  // Remove the projectile from the Box2D world
+                MProjectileShape.setPosition(-100, -100);  // Move the projectile shape off-screen
                 spawnProjectile();  // Spawn the next projectile
             }
         }
@@ -187,169 +187,169 @@ void Level1::update(float deltaTime) {
         checkEnemiesAlive();
 
         // Update block and projectile positions and rotations
-        b2Vec2 position = blockBody->GetPosition();
-        float angle = blockBody->GetAngle();
-        blockShape.setPosition(position.x * pixelsPerMeter, position.y * pixelsPerMeter);
-        blockShape.setRotation(angle * 180.0f / 3.14159f);
+        b2Vec2 position = MBlockBody->GetPosition();
+        float angle = MBlockBody->GetAngle();
+        MBlockShape.setPosition(position.x * MPixelsPerMeter, position.y * MPixelsPerMeter);
+        MBlockShape.setRotation(angle * 180.0f / 3.14159f);
 
         // Only update the projectile position if it hasn't been removed
         if (!isProjectileStopped) {
-            b2Vec2 projectilePosition = projectileBody->GetPosition();
-            float projectileAngle = projectileBody->GetAngle();
-            projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
-            projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
+            b2Vec2 projectilePosition = MProjectileBody->GetPosition();
+            float projectileAngle = MProjectileBody->GetAngle();
+            MProjectileShape.setPosition(projectilePosition.x * MPixelsPerMeter, projectilePosition.y * MPixelsPerMeter);
+            MProjectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
         }
     }
 }
 
-void Level1::draw(sf::RenderWindow& window) {
+void Level1::draw(sf::RenderWindow& Window) {
     // Draw background
-    window.draw(backgroundSprite);
+    Window.draw(MBackgroundSprite);
 
     // Draw the ground tiles
-    for (const auto& tile : grassTiles) {
-        window.draw(tile);
+    for (const auto& tile : MGrassTiles) {
+        Window.draw(tile);
     }
 
     // Draw the block
-    window.draw(blockShape);
+    Window.draw(MBlockShape);
 
     // Draw the projectile if it's not removed
     if (!isProjectileStopped) {
-        window.draw(projectileShape);
+        Window.draw(MProjectileShape);
     }
 
     // Draw the drag line only if the projectile has not been launched and dragging is happening
     if (isDragging && !isProjectileLaunched) {
-        for (const auto& point : trajectoryPoints) {
-            window.draw(point);
+        for (const auto& point : MTrajectoryPoints) {
+            Window.draw(point);
         }
     }
 
     // Draw the enemy if alive
-    for (auto& enemy : enemies) {
+    for (auto& enemy : MEnemies) {
         if (enemy.isAlive) {
-            window.draw(enemy.sprite);
+            Window.draw(enemy.MEnemySprite);
         }
     }
 
     // Calculate scaling factors based on window size
-    float scaleX = static_cast<float>(window.getSize().x) / 1600.0f;  // 1600 is the reference width
-    float scaleY = static_cast<float>(window.getSize().y) / 900.0f;   // 900 is the reference height
+    float scaleX = static_cast<float>(Window.getSize().x) / 1600.0f;  // 1600 is the reference width
+    float scaleY = static_cast<float>(Window.getSize().y) / 900.0f;   // 900 is the reference height
 
     // Handle win screen
     if (isWin) {
         // Draw dark overlay
-        darkOverlay.setSize(sf::Vector2f(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)));
-        window.draw(darkOverlay);
+        MDarkOverlay.setSize(sf::Vector2f(static_cast<float>(Window.getSize().x), static_cast<float>(Window.getSize().y)));
+        Window.draw(MDarkOverlay);
 
         // "You Win" Title
         sf::Text winText;
-        winText.setFont(font);
+        winText.setFont(MFont);
         winText.setString("You Win!");
         winText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
         sf::FloatRect winBounds = winText.getLocalBounds();
         winText.setOrigin(winBounds.width / 2.0f, winBounds.height / 2.0f);
-        winText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
-        window.draw(winText);
+        winText.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 4.0f);  // Centered title
+        Window.draw(winText);
 
         // Draw the "Next Level" button
-        nextLevelButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect nextBounds = nextLevelButton.getLocalBounds();
-        nextLevelButton.setOrigin(nextBounds.width / 2.0f, nextBounds.height / 2.0f);
-        nextLevelButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f);  // Centered under the title
-        window.draw(nextLevelButton);
+        MNextLevelButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect nextBounds = MNextLevelButton.getLocalBounds();
+        MNextLevelButton.setOrigin(nextBounds.width / 2.0f, nextBounds.height / 2.0f);
+        MNextLevelButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f);  // Centered under the title
+        Window.draw(MNextLevelButton);
 
         // Draw the "Restart" button
-        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect restartBounds = restartButton.getLocalBounds();
-        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
-        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
-        window.draw(restartButton);
+        MRestartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = MRestartButton.getLocalBounds();
+        MRestartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        MRestartButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
+        Window.draw(MRestartButton);
 
         // Draw the "Menu" button
-        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect menuBounds = menuButton.getLocalBounds();
-        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
-        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
-        window.draw(menuButton);
+        MMenuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = MMenuButton.getLocalBounds();
+        MMenuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        MMenuButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
+        Window.draw(MMenuButton);
     }
 
     if (isLose) {
         // Draw dark overlay
-        darkOverlay.setSize(sf::Vector2f(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)));
-        window.draw(darkOverlay);
+        MDarkOverlay.setSize(sf::Vector2f(static_cast<float>(Window.getSize().x), static_cast<float>(Window.getSize().y)));
+        Window.draw(MDarkOverlay);
 
         // "You Lose!" Title
         sf::Text loseText;
-        loseText.setFont(font);
+        loseText.setFont(MFont);
         loseText.setString("You Lose!");
         loseText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
         sf::FloatRect loseBounds = loseText.getLocalBounds();
         loseText.setOrigin(loseBounds.width / 2.0f, loseBounds.height / 2.0f);
-        loseText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
-        window.draw(loseText);
+        loseText.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 4.0f);  // Centered title
+        Window.draw(loseText);
 
         // Draw the "Restart" button
-        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect restartBounds = restartButton.getLocalBounds();
-        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
-        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
-        window.draw(restartButton);
+        MRestartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = MRestartButton.getLocalBounds();
+        MRestartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        MRestartButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
+        Window.draw(MRestartButton);
 
         // Draw the "Menu" button
-        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect menuBounds = menuButton.getLocalBounds();
-        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
-        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
-        window.draw(menuButton);
+        MMenuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = MMenuButton.getLocalBounds();
+        MMenuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        MMenuButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
+        Window.draw(MMenuButton);
     }
 
     // Handle pause screen if not on win screen
     if (isPaused && !isWin && !isLose) {
         // Draw dark overlay
-        darkOverlay.setSize(sf::Vector2f(window.getSize().x, window.getSize().y));
-        window.draw(darkOverlay);
+        MDarkOverlay.setSize(sf::Vector2f(Window.getSize().x, Window.getSize().y));
+        Window.draw(MDarkOverlay);
 
         // "Paused" Title
         sf::Text pausedText;
-        pausedText.setFont(font);
+        pausedText.setFont(MFont);
         pausedText.setString("Paused");
         pausedText.setCharacterSize(static_cast<unsigned int>(100 * scaleY));
         sf::FloatRect pausedBounds = pausedText.getLocalBounds();
         pausedText.setOrigin(pausedBounds.width / 2.0f, pausedBounds.height / 2.0f);
-        pausedText.setPosition(window.getSize().x / 2.0f, window.getSize().y / 4.0f);  // Centered title
-        window.draw(pausedText);
+        pausedText.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 4.0f);  // Centered title
+        Window.draw(pausedText);
 
         // Draw the "Resume" button
-        resumeButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect resumeBounds = resumeButton.getLocalBounds();
-        resumeButton.setOrigin(resumeBounds.width / 2.0f, resumeBounds.height / 2.0f);
-        resumeButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f);  // Centered under the title
-        window.draw(resumeButton);
+        MResumeButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect resumeBounds = MResumeButton.getLocalBounds();
+        MResumeButton.setOrigin(resumeBounds.width / 2.0f, resumeBounds.height / 2.0f);
+        MResumeButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f);  // Centered under the title
+        Window.draw(MResumeButton);
 
         // Draw the "Restart" button
-        restartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect restartBounds = restartButton.getLocalBounds();
-        restartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
-        restartButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
-        window.draw(restartButton);
+        MRestartButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect restartBounds = MRestartButton.getLocalBounds();
+        MRestartButton.setOrigin(restartBounds.width / 2.0f, restartBounds.height / 2.0f);
+        MRestartButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 100 * scaleY);  // Centered and spaced
+        Window.draw(MRestartButton);
 
         // Draw the "Menu" button
-        menuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
-        sf::FloatRect menuBounds = menuButton.getLocalBounds();
-        menuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
-        menuButton.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
-        window.draw(menuButton);
+        MMenuButton.setCharacterSize(static_cast<unsigned int>(50 * scaleY));
+        sf::FloatRect menuBounds = MMenuButton.getLocalBounds();
+        MMenuButton.setOrigin(menuBounds.width / 2.0f, menuBounds.height / 2.0f);
+        MMenuButton.setPosition(Window.getSize().x / 2.0f, Window.getSize().y / 2.0f + 200 * scaleY);  // Centered and spaced
+        Window.draw(MMenuButton);
     }
 }
 
-void Level1::updateButtonPositions(const sf::Vector2u& windowSize)
+void Level1::updateButtonPositions(const sf::Vector2u& WindowSize)
 {
-	Scene::updateButtonPositions(windowSize);
+	Scene::updateButtonPositions(WindowSize);
 }
 
-void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
+void Level1::handleInput(sf::RenderWindow& Window, sf::Event& Event) {
 
     // DEBUG: set lose
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::L) && !isPaused && !isWin)
@@ -359,117 +359,117 @@ void Level1::handleInput(sf::RenderWindow& window, sf::Event& event) {
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::R) && !isPaused && !isWin && !isLose)
     {
-        sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+        MSceneManager.setScene(std::make_shared<Level1>(MSceneManager));  // Restart the level
     }
 
     // Handle pausing with the 'P' key without using KeyReleased and avoiding key repeat
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::P) && !isWin && !isLose) {
-        if (!pKeyPressed) {
-            pKeyPressed = true;  // Mark the key as pressed
+        if (!PKeyPressed) {
+            PKeyPressed = true;  // Mark the key as pressed
             togglePause();  // Toggle pause when 'P' is pressed once
 
             // Clear any input states related to dragging
             isDragging = false;
-            trajectoryPoints.clear();
+            MTrajectoryPoints.clear();
         }
     }
     else {
-        pKeyPressed = false;  // Reset the flag when the key is released
+        PKeyPressed = false;  // Reset the flag when the key is released
     }
 
     if (isPaused && !isWin && !isLose) {
         // Handle mouse interaction only for the pause menu buttons when paused
-        if (event.type == sf::Event::MouseButtonReleased) {
-            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            if (resumeButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+        if (Event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(Window);
+            if (MResumeButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                 togglePause();  // Resume the game
             }
-            else if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+            else if (MRestartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<Level1>(MSceneManager));  // Restart the level
             }
-            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            else if (MMenuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));  // Go back to menu
             }
         }
     }
     if (!isPaused && !isWin && !isLose) {
         // Only allow input when the game is not paused
-        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+        if (Event.type == sf::Event::MouseButtonPressed && Event.mouseButton.button == sf::Mouse::Left) {
             isDragging = true;
-            dragStart = sf::Vector2f(sf::Mouse::getPosition(window));
+            MDragStart = sf::Vector2f(sf::Mouse::getPosition(Window));
         }
 
-        if (event.type == sf::Event::MouseMoved && isDragging) {
-            dragEnd = sf::Vector2f(sf::Mouse::getPosition(window));
-            calculateParabolicTrajectory(dragStart, dragEnd);
+        if (Event.type == sf::Event::MouseMoved && isDragging) {
+            MDragEnd = sf::Vector2f(sf::Mouse::getPosition(Window));
+            calculateParabolicTrajectory(MDragStart, MDragEnd);
         }
 
-        if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+        if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left) {
             isDragging = false;
-            launchProjectile(dragStart, dragEnd);  // Launch the projectile
+            launchProjectile(MDragStart, MDragEnd);  // Launch the projectile
         }
     }
     if (isWin) {
-        if (event.type == sf::Event::MouseButtonReleased) {
-            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            if (nextLevelButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<Level2>(sceneManager));  // Go to the next level (Level2)
+        if (Event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(Window);
+            if (MNextLevelButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<Level2>(MSceneManager));  // Go to the next level (Level2)
             }
-            else if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+            else if (MRestartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<Level1>(MSceneManager));  // Restart the level
             }
-            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            else if (MMenuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));  // Go back to menu
             }
         }
     }
     if (isLose) {
         // Handle mouse interaction for the lose screen
-        if (event.type == sf::Event::MouseButtonReleased) {
-            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            if (restartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<Level1>(sceneManager));  // Restart the level
+        if (Event.type == sf::Event::MouseButtonReleased) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(Window);
+            if (MRestartButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<Level1>(MSceneManager));  // Restart the level
             }
-            else if (menuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                sceneManager.setScene(std::make_shared<TitleScreen>(sceneManager));  // Go back to menu
+            else if (MMenuButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));  // Go back to menu
             }
         }
     }
 }
 
-void Level1::launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end) {
+void Level1::launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End) {
     if (isPaused || isWin || isLose || isProjectileLaunched) {
         return;  // Don't launch projectiles if the game is paused, already won/lost, or the projectile is already launched
     }
 
     // Calculate direction and magnitude of the launch force
-    sf::Vector2f force = start - end;
+    sf::Vector2f force = Start - End;
 
     // Apply force to the projectile body
-    b2Vec2 launchForce((force.x * 0.75f) / pixelsPerMeter, (force.y * 0.75f) / pixelsPerMeter);
-    projectileBody->ApplyLinearImpulseToCenter(launchForce, true);
+    b2Vec2 launchForce((force.x * 0.75f) / MPixelsPerMeter, (force.y * 0.75f) / MPixelsPerMeter);
+    MProjectileBody->ApplyLinearImpulseToCenter(launchForce, true);
 
     // Mark the projectile as launched
     isProjectileLaunched = true;
     isDragging = false;  // Disable dragging after launch
 
     // Clear the trajectory points after launching
-    trajectoryPoints.clear();
+    MTrajectoryPoints.clear();
 }
 
-void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end) {
+void Level1::calculateParabolicTrajectory(const sf::Vector2f& Start, const sf::Vector2f& End) {
     // Clear previous trajectory points
-    trajectoryPoints.clear();
+    MTrajectoryPoints.clear();
 
     // Start from the projectile's current position
-    sf::Vector2f projectilePosition = projectileShape.getPosition();
+    sf::Vector2f projectilePosition = MProjectileShape.getPosition();
 
     // Calculate direction and velocity, reversed to get the proper trajectory
-    sf::Vector2f direction = start - end;  // Reverse the direction so it's from mouse to projectile
-    float velocityX = (direction.x * 3.0f) / pixelsPerMeter;  // Increased by a factor of 3
-    float velocityY = (direction.y * 3.0f) / pixelsPerMeter;  // Y-axis is no longer inverted
+    sf::Vector2f direction = Start - End;  // Reverse the direction so it's from mouse to projectile
+    float velocityX = (direction.x * 3.0f) / MPixelsPerMeter;  // Increased by a factor of 3
+    float velocityY = (direction.y * 3.0f) / MPixelsPerMeter;  // Y-axis is no longer inverted
 
-    float gravity = world.GetGravity().y;  // Get gravity from Box2D world
+    float gravity = MWorld.GetGravity().y;  // Get gravity from Box2D world
 
     const int numPoints = 30;  // Number of points to simulate for the trajectory
     const float timeStep = 0.1f;  // Time step for each point in the simulation
@@ -498,10 +498,10 @@ void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::V
 
         sf::CircleShape point(5.0f);  // Increased size of the point for more visibility
         point.setFillColor(sf::Color::Red);
-        point.setPosition((projectilePosition.x / pixelsPerMeter + x) * pixelsPerMeter,
-            (projectilePosition.y / pixelsPerMeter + y) * pixelsPerMeter);
+        point.setPosition((projectilePosition.x / MPixelsPerMeter + x) * MPixelsPerMeter,
+            (projectilePosition.y / MPixelsPerMeter + y) * MPixelsPerMeter);
 
-        trajectoryPoints.push_back(point);
+        MTrajectoryPoints.push_back(point);
     }
 }
 
@@ -510,16 +510,16 @@ void Level1::togglePause() {
 }
 
 void Level1::handleCollisions() {
-    for (b2Contact* contact = world.GetContactList(); contact; contact = contact->GetNext()) {
+    for (b2Contact* contact = MWorld.GetContactList(); contact; contact = contact->GetNext()) {
         if (contact->IsTouching()) {
             b2Body* bodyA = contact->GetFixtureA()->GetBody();
             b2Body* bodyB = contact->GetFixtureB()->GetBody();
 
             // Iterate through all enemies
-            for (auto& enemy : enemies) {
-                if ((bodyA == enemy.body || bodyB == enemy.body) && enemy.isAlive) {
+            for (auto& enemy : MEnemies) {
+                if ((bodyA == enemy.MEnemyBody || bodyB == enemy.MEnemyBody) && enemy.isAlive) {
                     // Get the velocity and mass of the other body
-                    b2Body* otherBody = (bodyA == enemy.body) ? bodyB : bodyA;
+                    b2Body* otherBody = (bodyA == enemy.MEnemyBody) ? bodyB : bodyA;
                     float mass = otherBody->GetMass();
                     b2Vec2 velocity = otherBody->GetLinearVelocity();
                     float speed = velocity.Length();
@@ -530,7 +530,7 @@ void Level1::handleCollisions() {
 
                     if (speed > speedThreshold || mass > massThreshold) {
                         enemy.isAlive = false;
-                        world.DestroyBody(enemy.body);  // Destroy the enemy body
+                        MWorld.DestroyBody(enemy.MEnemyBody);  // Destroy the enemy body
                         std::cout << "Enemy killed by collision!" << std::endl;
                     }
                 }
@@ -539,59 +539,59 @@ void Level1::handleCollisions() {
     }
 }
 
-void Level1::initEnemies(const std::vector<sf::Vector2f>& positions) {
+void Level1::initEnemies(const std::vector<sf::Vector2f>& Positions) {
     // Load the enemy texture once for all enemies
-    if (!enemyTexture.loadFromFile("resources/kenney physics assets/PNG/Aliens/alienGreen_round.png")) {
+    if (!MEnemyTexture.loadFromFile("resources/kenney physics assets/PNG/Aliens/alienGreen_round.png")) {
         std::cerr << "Failed to load enemy texture!" << std::endl;
         return;
     }
 
     // Loop through the provided positions to create the enemies
-    for (const auto& pos : positions) {
+    for (const auto& pos : Positions) {
         Enemy enemy;
 
         // Set texture and scaling for the enemy sprite
-        enemy.sprite.setTexture(enemyTexture);
-        enemy.sprite.setScale(1.0f, 1.0f);  // Adjust scaling if needed
-        enemy.sprite.setOrigin(enemy.sprite.getGlobalBounds().width / 2.0f, enemy.sprite.getGlobalBounds().height / 2.0f);
+        enemy.MEnemySprite.setTexture(MEnemyTexture);
+        enemy.MEnemySprite.setScale(1.0f, 1.0f);  // Adjust scaling if needed
+        enemy.MEnemySprite.setOrigin(enemy.MEnemySprite.getGlobalBounds().width / 2.0f, enemy.MEnemySprite.getGlobalBounds().height / 2.0f);
 
         // Set initial position for each enemy
         float xPosition = pos.x;
         float yPosition = pos.y;
-        enemy.sprite.setPosition(xPosition, yPosition);
+        enemy.MEnemySprite.setPosition(xPosition, yPosition);
 
         // Define the enemy body in Box2D
         b2BodyDef enemyBodyDef;
         enemyBodyDef.type = b2_dynamicBody;
-        enemyBodyDef.position.Set(xPosition / pixelsPerMeter, yPosition / pixelsPerMeter);
-        enemy.body = world.CreateBody(&enemyBodyDef);
+        enemyBodyDef.position.Set(xPosition / MPixelsPerMeter, yPosition / MPixelsPerMeter);
+        enemy.MEnemyBody = MWorld.CreateBody(&enemyBodyDef);
 
         // Define the shape and properties
         b2PolygonShape enemyShape;
-        enemyShape.SetAsBox((enemy.sprite.getGlobalBounds().width / 2.0f) / pixelsPerMeter,
-            (enemy.sprite.getGlobalBounds().height / 2.0f) / pixelsPerMeter);
+        enemyShape.SetAsBox((enemy.MEnemySprite.getGlobalBounds().width / 2.0f) / MPixelsPerMeter,
+            (enemy.MEnemySprite.getGlobalBounds().height / 2.0f) / MPixelsPerMeter);
 
         b2FixtureDef enemyFixtureDef;
         enemyFixtureDef.shape = &enemyShape;
         enemyFixtureDef.density = 1.0f;
         enemyFixtureDef.friction = 0.5f;
-        enemy.body->CreateFixture(&enemyFixtureDef);
+        enemy.MEnemyBody->CreateFixture(&enemyFixtureDef);
 
         // Set user data for collision detection
-        enemy.body->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
+        enemy.MEnemyBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
 
         // Mark the enemy as alive initially
         enemy.isAlive = true;
 
         // Add the enemy to the list of enemies
-        enemies.push_back(enemy);
+        MEnemies.push_back(enemy);
     }
 }
 
 void Level1::checkEnemiesAlive() {
     bool allDead = true;
 
-    for (const auto& enemy : enemies) {
+    for (const auto& enemy : MEnemies) {
         if (enemy.isAlive) {
             allDead = false;
             break;  // Exit early if we find an enemy that is still alive
@@ -604,31 +604,31 @@ void Level1::checkEnemiesAlive() {
 }
 
 void Level1::spawnProjectile() {
-    if (remainingProjectiles > 0) {
+    if (MRemainingProjectiles > 0) {
         // Create a new projectile
         b2BodyDef projectileBodyDef;
         projectileBodyDef.type = b2_dynamicBody;
-        projectileBodyDef.position.Set(100.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Starting position for each projectile
-        projectileBody = world.CreateBody(&projectileBodyDef);
+        projectileBodyDef.position.Set(100.0f / MPixelsPerMeter, 800.0f / MPixelsPerMeter);  // Starting position for each projectile
+        MProjectileBody = MWorld.CreateBody(&projectileBodyDef);
 
         // Add linear damping to slow down the projectile over time (like resistance)
-        projectileBody->SetLinearDamping(0.8f);  // Adjust this value for more/less gradual slowing
+        MProjectileBody->SetLinearDamping(0.8f);  // Adjust this value for more/less gradual slowing
 
         b2CircleShape projectileShapeDef;
-        projectileShapeDef.m_radius = 25.0f / pixelsPerMeter;  // Set radius of the projectile
+        projectileShapeDef.m_radius = 25.0f / MPixelsPerMeter;  // Set radius of the projectile
 
         b2FixtureDef projectileFixtureDef;
         projectileFixtureDef.shape = &projectileShapeDef;
         projectileFixtureDef.density = 1.0f;           // Adjust density based on mass
         projectileFixtureDef.friction = 0.8f;          // High friction to simulate grass resistance
         projectileFixtureDef.restitution = 0.2f;       // Low restitution for less bounce on grass
-        projectileBody->CreateFixture(&projectileFixtureDef);
+        MProjectileBody->CreateFixture(&projectileFixtureDef);
 
         // Reset projectile flags and decrease the projectile count
         isProjectileLaunched = false;
         isProjectileStopped = false;
-        stationaryTime = 0.0f;
-        remainingProjectiles--;
+        MStationaryTime = 0.0f;
+        MRemainingProjectiles--;
     }
     else {
         // If no projectiles remain, trigger the lose condition

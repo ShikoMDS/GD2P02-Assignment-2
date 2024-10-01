@@ -8,88 +8,85 @@
 #include <vector>
 #include <iostream>
 
-class Level1 : public Scene {
+class Level1 final : public Scene {
 public:
-    Level1(SceneManager& manager);
+	explicit Level1(SceneManager& Manager);
 
-    void init() override;                     // Initialize the level
-    void handleInput(sf::RenderWindow& window, sf::Event& event) override;  // Handle player input
-    void update(float deltaTime) override;    // Update the game objects
-    void draw(sf::RenderWindow& window) override;  // Render the game objects
-    void updateButtonPositions(const sf::Vector2u& windowSize) override;   // Update positions of UI elements based on window size
+    void init() override;                     
+    void handleInput(sf::RenderWindow& Window, sf::Event& Event) override; 
+    void update(float DeltaTime) override;   
+    void draw(sf::RenderWindow& Window) override;  
+    void updateButtonPositions(const sf::Vector2u& WindowSize) override; 
 
-    void togglePause();  // Function to toggle the pause state
+    void togglePause(); 
 
 private:
-    b2World world;              // Box2D world
-    float pixelsPerMeter;        // Scaling factor for SFML pixels to Box2D meters
-    SceneManager& sceneManager;  // Reference to scene manager
+    b2World MWorld;
+    float MPixelsPerMeter; // Scaling factor for SFML pixels to Box2D meters
+    SceneManager& MSceneManager;
 
-    sf::Texture backgroundTexture;
-    sf::Sprite backgroundSprite;
+    sf::Texture MBackgroundTexture;
+    sf::Sprite MBackgroundSprite;
 
-    sf::Texture grassTexture;  // Texture for the grass ground
-    std::vector<sf::Sprite> grassTiles;  // Tiles for the grass ground
+    sf::Texture MGrassTexture;  
+    std::vector<sf::Sprite> MGrassTiles; 
 
-    b2Body* groundBody;   // Box2D body for the ground
-    b2Body* blockBody;    // Box2D body for the block
+    b2Body* MGroundBody; 
+    b2Body* MBlockBody; 
 
-    sf::Texture blockTexture;    // Texture for the falling block
-    sf::RectangleShape blockShape; // Visual representation of the block
+    sf::Texture MBlockTexture;
+    sf::RectangleShape MBlockShape; // Visual representation of block
 
-    bool isPaused = false;        // Pause state
-    sf::RectangleShape darkOverlay;  // Dark overlay when paused
-    sf::Text resumeButton;        // Resume button in pause menu
-    sf::Text restartButton;       // Restart button in pause menu
-    sf::Text menuButton;          // Menu button in pause menu
-    sf::Font font;                // Font for the buttons
-    bool pKeyPressed = false;     // To track the state of the 'P' key
+    bool isPaused = false; 
+    sf::RectangleShape MDarkOverlay; 
+    sf::Text MResumeButton; 
+    sf::Text MRestartButton;
+    sf::Text MMenuButton;   
+    sf::Font MFont;         
+    bool PKeyPressed = false;     // State of 'P' key
 
-    b2Body* projectileBody;        // Box2D body for the projectile
-    sf::Texture projectileTexture;  // Texture for the projectile character
-    sf::CircleShape projectileShape; // SFML representation of the projectile
+    b2Body* MProjectileBody;        
+    sf::Texture MProjectileTexture; 
+    sf::CircleShape MProjectileShape; // Visual representation of projectile
 
-    sf::Vector2f dragStart;         // Start position of drag
-    sf::Vector2f dragEnd;           // End position of drag
-    bool isDragging = false;        // Track if currently dragging
-    sf::VertexArray dragLine;       // Visual indicator for drag direction
-    std::vector<sf::CircleShape> trajectoryPoints; // Parabolic trajectory visualization
+    sf::Vector2f MDragStart;       
+    sf::Vector2f MDragEnd;         
+    bool isDragging = false;       
+    sf::VertexArray MDragLine;       // Visual indicator for drag direction
+    std::vector<sf::CircleShape> MTrajectoryPoints; // Parabolic trajectory visualization
 
-    void launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end);
-    void calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end);
 
-    // Multiple enemy support
+    // Multiple enemy support (same type for now)
     struct Enemy {
-        sf::Sprite sprite;
-        b2Body* body;
+        sf::Sprite MEnemySprite;
+        b2Body* MEnemyBody;
         bool isAlive;
     };
-    std::vector<Enemy> enemies;    // Store multiple enemies
+    std::vector<Enemy> MEnemies;    // Store multiple enemies
 
-    void handleCollisions();       // New function to handle collision logic
-    void initEnemies(const std::vector<sf::Vector2f>& positions);
-    // Initialize the enemy entities
 
     bool isWin;
 
-    sf::Text nextLevelButton;  // Button to transition to the next level
+    sf::Text MNextLevelButton; 
 
-    void checkEnemiesAlive();      // Check if all enemies are dead
 
-    sf::Texture enemyTexture;
+    sf::Texture MEnemyTexture;
 
-    bool isLose;               // Track if the player has lost
 
-    bool isProjectileLaunched = false;  // New flag to track if the projectile has been launched
-    bool isProjectileStopped = false;   // Flag to track if projectile has stopped moving
+    bool isProjectileLaunched = false;  
+    bool isProjectileStopped = false;   
+    int MRemainingProjectiles;
+    float MStationaryTime = 0.0f; 
 
-    float stationaryTime = 0.0f;  // Track how long the projectile has been stationary
-	float removalTimeThreshold = 3.0f;  // Time (in seconds) before removal
+    float MScreenLeftBound = -50.0f;      // Left edge (off-screen)
+    float MScreenRightBound = 1650.0f;     // Right edge (off-screen)
 
-    int remainingProjectiles;  // Tracks how many projectiles are left
-    void spawnProjectile();    // Function to spawn a new projectile
+    bool isLose;
 
-    const float screenLeftBound = -100.0f;      // Left edge (off-screen)
-    const float screenRightBound = 1600.0f;     // Right edge (off-screen, adjust based on screen width)
-
+    void initEnemies(const std::vector<sf::Vector2f>& Positions);
+    void spawnProjectile();   
+    void launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End);
+    void calculateParabolicTrajectory(const sf::Vector2f& Start, const sf::Vector2f& End);
+    void handleCollisions();    
+    void checkEnemiesAlive();
 };

@@ -114,7 +114,14 @@ void Level1::init() {
     projectileFixtureDef.friction = 0.3f;
     projectileBody->CreateFixture(&projectileFixtureDef);
 
-    initEnemy();  // Initialize the enemy
+    std::vector enemyPositions = {
+    sf::Vector2f(1100.0f, 800.0f),  // First enemy position
+    sf::Vector2f(1200.0f, 800.0f),  // Second enemy position
+    sf::Vector2f(1300.0f, 800.0f),   // Third enemy position
+    sf::Vector2f(1500.0f, 800.0f)   // Fourth enemy position
+    };
+
+    initEnemies(enemyPositions);
 
 }
 
@@ -122,15 +129,20 @@ void Level1::update(float deltaTime) {
     if (!isPaused && !isWin) {
         world.Step(deltaTime, 8, 3);  // Update the Box2D world
 
-        // Update the enemy's position
-        if (isEnemyAlive) {
-            b2Vec2 enemyPos = enemyBody->GetPosition();
-            enemySprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
-            enemySprite.setRotation(enemyBody->GetAngle() * 180.0f / b2_pi);
+        // Update enemy positions
+        for (auto& enemy : enemies) {
+            if (enemy.isAlive) {
+                b2Vec2 enemyPos = enemy.body->GetPosition();
+                enemy.sprite.setPosition(enemyPos.x * pixelsPerMeter, enemyPos.y * pixelsPerMeter);
+                enemy.sprite.setRotation(enemy.body->GetAngle() * 180.0f / b2_pi);
+            }
         }
 
-        // Handle collisions and check for death
+        // Handle collisions
         handleCollisions();
+
+        // Check if all enemies are dead
+        checkEnemiesAlive();
 
         // Update block and projectile positions and rotations
         b2Vec2 position = blockBody->GetPosition();
@@ -138,16 +150,10 @@ void Level1::update(float deltaTime) {
         blockShape.setPosition(position.x * pixelsPerMeter, position.y * pixelsPerMeter);
         blockShape.setRotation(angle * 180.0f / 3.14159f);
 
-        // Update the projectile
         b2Vec2 projectilePosition = projectileBody->GetPosition();
         float projectileAngle = projectileBody->GetAngle();
         projectileShape.setPosition(projectilePosition.x * pixelsPerMeter, projectilePosition.y * pixelsPerMeter);
         projectileShape.setRotation(projectileAngle * 180.0f / 3.14159f);
-
-        // Check if all enemies are dead
-        if (!isEnemyAlive) {  // Assuming this tracks the enemy state
-            isWin = true;  // Set win state
-        }
     }
 }
 
@@ -173,9 +179,11 @@ void Level1::draw(sf::RenderWindow& window) {
         }
     }
 
-    // Draw the enemy if alive
-    if (isEnemyAlive) {
-        window.draw(enemySprite);
+    // Draw all enemies that are alive
+    for (const auto& enemy : enemies) {
+        if (enemy.isAlive) {
+            window.draw(enemy.sprite);
+        }
     }
 
     // Calculate scaling factors based on window size
@@ -384,65 +392,93 @@ void Level1::togglePause() {
 void Level1::handleCollisions() {
     for (b2Contact* contact = world.GetContactList(); contact; contact = contact->GetNext()) {
         if (contact->IsTouching()) {
-            // Get the two fixtures involved in the collision
-            b2Fixture* fixtureA = contact->GetFixtureA();
-            b2Fixture* fixtureB = contact->GetFixtureB();
-            b2Body* bodyA = fixtureA->GetBody();
-            b2Body* bodyB = fixtureB->GetBody();
+            b2Body* bodyA = contact->GetFixtureA()->GetBody();
+            b2Body* bodyB = contact->GetFixtureB()->GetBody();
 
-            // Identify if the enemy is involved
-            bool isEnemyInvolved = (bodyA == enemyBody || bodyB == enemyBody);
-            b2Body* otherBody = (bodyA == enemyBody) ? bodyB : bodyA;
+            // Iterate through all enemies
+            for (auto& enemy : enemies) {
+                if ((bodyA == enemy.body || bodyB == enemy.body) && enemy.isAlive) {
+                    // Get the velocity and mass of the other body
+                    b2Body* otherBody = (bodyA == enemy.body) ? bodyB : bodyA;
+                    float mass = otherBody->GetMass();
+                    b2Vec2 velocity = otherBody->GetLinearVelocity();
+                    float speed = velocity.Length();
 
-            if (isEnemyInvolved) {
-                // Get the velocity and mass of the other body (projectile or block)
-                float mass = otherBody->GetMass();
-                b2Vec2 velocity = otherBody->GetLinearVelocity();
-                float speed = velocity.Length();
+                    // If speed and mass exceed the threshold, kill the enemy
+                    const float speedThreshold = 0.2f;
+                    const float massThreshold = 1.0f;
 
-                // Define reasonable thresholds for mass and speed to kill the enemy
-                const float speedThreshold = 0.2f;  // Adjust this value based on your game dynamics
-                const float massThreshold = 1.0f;   // Adjust this for reasonable mass to kill
-
-                // If the speed or mass is greater than the threshold, the enemy dies
-                if (speed > speedThreshold || mass > massThreshold) {
-                    isEnemyAlive = false;
-                    world.DestroyBody(enemyBody);  // Destroy the enemy body
-                    std::cout << "Enemy killed by collision!" << std::endl;
+                    if (speed > speedThreshold || mass > massThreshold) {
+                        enemy.isAlive = false;
+                        world.DestroyBody(enemy.body);  // Destroy the enemy body
+                        std::cout << "Enemy killed by collision!" << std::endl;
+                    }
                 }
             }
         }
     }
 }
 
-void Level1::initEnemy() {
-    // Load enemy texture
+void Level1::initEnemies(const std::vector<sf::Vector2f>& positions) {
+    // Load the enemy texture once for all enemies
     if (!enemyTexture.loadFromFile("resources/kenney physics assets/PNG/Aliens/alienGreen_round.png")) {
-        // Handle loading error
+        std::cerr << "Failed to load enemy texture!" << std::endl;
+        return;
     }
 
-    // Adjust scaling to match the size you need
-    enemySprite.setTexture(enemyTexture);
-    enemySprite.setScale(1.0f, 1.0f);  // Adjust scaling if needed
-    enemySprite.setOrigin(enemySprite.getGlobalBounds().width / 2.0f, enemySprite.getGlobalBounds().height / 2.0f);
+    // Loop through the provided positions to create the enemies
+    for (const auto& pos : positions) {
+        Enemy enemy;
 
-    // Define the enemy body in Box2D
-    b2BodyDef enemyBodyDef;
-    enemyBodyDef.type = b2_dynamicBody;
-    enemyBodyDef.position.Set(1100.0f / pixelsPerMeter, 800.0f / pixelsPerMeter);  // Set position on the slope
-    enemyBody = world.CreateBody(&enemyBodyDef);
+        // Set texture and scaling for the enemy sprite
+        enemy.sprite.setTexture(enemyTexture);
+        enemy.sprite.setScale(1.0f, 1.0f);  // Adjust scaling if needed
+        enemy.sprite.setOrigin(enemy.sprite.getGlobalBounds().width / 2.0f, enemy.sprite.getGlobalBounds().height / 2.0f);
 
-    // Define the enemy shape, matching the sprite bounds
-    b2PolygonShape enemyShape;
-    enemyShape.SetAsBox((enemySprite.getGlobalBounds().width / 2.0f) / pixelsPerMeter,
-        (enemySprite.getGlobalBounds().height / 2.0f) / pixelsPerMeter);
+        // Set initial position for each enemy
+        float xPosition = pos.x;
+        float yPosition = pos.y;
+        enemy.sprite.setPosition(xPosition, yPosition);
 
-    b2FixtureDef enemyFixtureDef;
-    enemyFixtureDef.shape = &enemyShape;
-    enemyFixtureDef.density = 1.0f;
-    enemyFixtureDef.friction = 0.5f;
-    enemyBody->CreateFixture(&enemyFixtureDef);
+        // Define the enemy body in Box2D
+        b2BodyDef enemyBodyDef;
+        enemyBodyDef.type = b2_dynamicBody;
+        enemyBodyDef.position.Set(xPosition / pixelsPerMeter, yPosition / pixelsPerMeter);
+        enemy.body = world.CreateBody(&enemyBodyDef);
 
-    // Set user data for collision detection later
-    enemyBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
+        // Define the shape and properties
+        b2PolygonShape enemyShape;
+        enemyShape.SetAsBox((enemy.sprite.getGlobalBounds().width / 2.0f) / pixelsPerMeter,
+            (enemy.sprite.getGlobalBounds().height / 2.0f) / pixelsPerMeter);
+
+        b2FixtureDef enemyFixtureDef;
+        enemyFixtureDef.shape = &enemyShape;
+        enemyFixtureDef.density = 1.0f;
+        enemyFixtureDef.friction = 0.5f;
+        enemy.body->CreateFixture(&enemyFixtureDef);
+
+        // Set user data for collision detection
+        enemy.body->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
+
+        // Mark the enemy as alive initially
+        enemy.isAlive = true;
+
+        // Add the enemy to the list of enemies
+        enemies.push_back(enemy);
+    }
+}
+
+void Level1::checkEnemiesAlive() {
+    bool allDead = true;
+
+    for (const auto& enemy : enemies) {
+        if (enemy.isAlive) {
+            allDead = false;
+            break;  // Exit early if we find an enemy that is still alive
+        }
+    }
+
+    if (allDead) {
+        isWin = true;  // Trigger win condition
+    }
 }

@@ -58,17 +58,23 @@ private:
     void launchProjectile(const sf::Vector2f& start, const sf::Vector2f& end);
     void calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end);
 
-    // New declarations for the enemy
-    b2Body* enemyBody;             // Box2D body for the enemy
-    sf::Sprite enemySprite;        // SFML sprite for the enemy
-    sf::Texture enemyTexture;      // Enemy texture
-    bool isEnemyAlive = true;      // Track if the enemy is alive
+    // Multiple enemy support
+    struct Enemy {
+        sf::Sprite sprite;
+        b2Body* body;
+        bool isAlive;
+    };
+    std::vector<Enemy> enemies;    // Store multiple enemies
 
     void handleCollisions();       // New function to handle collision logic
-    void initEnemy();              // Initialize the enemy entity
+    void initEnemies(const std::vector<sf::Vector2f>& positions);
+    // Initialize the enemy entities
 
     bool isWin;
 
     sf::Text nextLevelButton;  // Button to transition to the next level
 
+    void checkEnemiesAlive();      // Check if all enemies are dead
+
+    sf::Texture enemyTexture;
 };

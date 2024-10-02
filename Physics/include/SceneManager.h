@@ -7,14 +7,14 @@ public:
     // Sets the current scene
     void setScene(const std::shared_ptr<Scene>& NewScene);
 
-    // Handle input for the current scene
-    void handleInput(sf::RenderWindow& Window, sf::Event& Event) const;
+    // Render the current scene
+    void draw(sf::RenderWindow& Window) const;
 
     // Update the current scene
     void update(float DeltaTime) const;
 
-    // Render the current scene
-    void draw(sf::RenderWindow& Window) const;
+    // Handle input for the current scene
+    void handleInput(sf::RenderWindow& Window, sf::Event& Event) const;
 
     // Returns the current scene
     [[nodiscard]] std::shared_ptr<Scene> getCurrentScene() const;

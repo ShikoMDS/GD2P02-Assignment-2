@@ -77,6 +77,26 @@ void LevelSelection::init()
 	                      MBackButton.getPosition().y + MBackButton.getSize().y / 2.0f);
 }
 
+void LevelSelection::draw(sf::RenderWindow& Window)
+{
+	Window.draw(MBackgroundSprite);
+
+	Window.draw(MLevelText);
+
+	Window.draw(MLevel1Button);
+	Window.draw(MLevel1Text);
+
+	Window.draw(MLevel2Button);
+	Window.draw(MLevel2Text);
+
+	Window.draw(MBackButton);
+	Window.draw(MBackText);
+}
+
+void LevelSelection::update(float DeltaTime)
+{
+}
+
 void LevelSelection::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 {
 	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
@@ -98,26 +118,6 @@ void LevelSelection::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 			MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));
 		}
 	}
-}
-
-void LevelSelection::update(float DeltaTime)
-{
-}
-
-void LevelSelection::draw(sf::RenderWindow& Window)
-{
-	Window.draw(MBackgroundSprite);
-
-	Window.draw(MLevelText);
-
-	Window.draw(MLevel1Button);
-	Window.draw(MLevel1Text);
-
-	Window.draw(MLevel2Button);
-	Window.draw(MLevel2Text);
-
-	Window.draw(MBackButton);
-	Window.draw(MBackText);
 }
 
 void LevelSelection::updateButtonPositions(const sf::Vector2u& WindowSize)

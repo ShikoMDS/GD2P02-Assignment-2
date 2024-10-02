@@ -7,12 +7,12 @@ void SceneManager::setScene(const std::shared_ptr<Scene>& NewScene)
 	MCurrentScene->init();
 }
 
-// Handles input for the current scene
-void SceneManager::handleInput(sf::RenderWindow& Window, sf::Event& Event) const
+// Renders the current scene
+void SceneManager::draw(sf::RenderWindow& Window) const
 {
 	if (MCurrentScene)
 	{
-		MCurrentScene->handleInput(Window, Event);
+		MCurrentScene->draw(Window);
 	}
 }
 
@@ -25,12 +25,12 @@ void SceneManager::update(const float DeltaTime) const
 	}
 }
 
-// Renders the current scene
-void SceneManager::draw(sf::RenderWindow& Window) const
+// Handles input for the current scene
+void SceneManager::handleInput(sf::RenderWindow& Window, sf::Event& Event) const
 {
 	if (MCurrentScene)
 	{
-		MCurrentScene->draw(Window);
+		MCurrentScene->handleInput(Window, Event);
 	}
 }
 

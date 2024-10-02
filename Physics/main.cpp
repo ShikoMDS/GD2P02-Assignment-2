@@ -19,25 +19,26 @@ void toggleFullscreen(sf::RenderWindow& Window, bool& isFullscreen)
 
 void enforceAspectRatio(sf::RenderWindow& Window, const float AspectRatio)
 {
-	const sf::Vector2u LWindowSize = Window.getSize(); // Get the current window size
+	const sf::Vector2u LWindowSize = Window.getSize(); // Get current window size
 	const float LCurrentAspectRatio = static_cast<float>(LWindowSize.x) / static_cast<float>(LWindowSize.y);
 
-	// If the current aspect ratio does not match the desired one
+	// If current aspect ratio does not match desired one
 	if (LCurrentAspectRatio > AspectRatio)
 	{
-		// Too wide: adjust the width
-		const unsigned int LNewWidth = static_cast<unsigned int>(LWindowSize.y * AspectRatio);
+		// Too wide: adjust width
+		const auto LNewWidth = static_cast<unsigned int>(static_cast<float>(LWindowSize.y) * AspectRatio);
 		Window.setSize(sf::Vector2u(LNewWidth, LWindowSize.y));
 	}
 	else if (LCurrentAspectRatio < AspectRatio)
 	{
-		// Too tall: adjust the height
-		const unsigned int LNewHeight = static_cast<unsigned int>(LWindowSize.x / AspectRatio);
+		// Too tall: adjust height
+		const auto LNewHeight = static_cast<unsigned int>(static_cast<float>(LWindowSize.x) / AspectRatio);
 		Window.setSize(sf::Vector2u(LWindowSize.x, LNewHeight));
 	}
 
-	// Adjust the view to fit the new window size
-	const sf::FloatRect LVisibleArea(0, 0, Window.getSize().x, Window.getSize().y);
+	// Adjust view to fit new window size
+	const sf::FloatRect LVisibleArea(0, 0, static_cast<float>(Window.getSize().x),
+	                                 static_cast<float>(Window.getSize().y));
 	Window.setView(sf::View(LVisibleArea));
 }
 
@@ -50,7 +51,7 @@ int main()
 
 	SceneManager LSceneManager;
 
-	// Start with the title screen
+	// Start with title screen
 	LSceneManager.setScene(std::make_shared<TitleScreen>(LSceneManager));
 
 	sf::Clock LClock;

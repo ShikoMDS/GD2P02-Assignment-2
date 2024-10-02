@@ -45,6 +45,21 @@ void Instructions::init()
 	                      MBackButton.getPosition().y + MBackButton.getSize().y / 2.0f);
 }
 
+void Instructions::draw(sf::RenderWindow& Window)
+{
+	// Draw the background first
+	Window.draw(MBackgroundSprite);
+
+	Window.draw(MTitleText);
+	Window.draw(MInstructionsText);
+	Window.draw(MBackButton);
+	Window.draw(MBackText);
+}
+
+void Instructions::update(float DeltaTime)
+{
+}
+
 void Instructions::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 {
 	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
@@ -56,21 +71,6 @@ void Instructions::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 			MSceneManager.setScene(std::make_shared<TitleScreen>(MSceneManager));
 		}
 	}
-}
-
-void Instructions::update(float DeltaTime)
-{
-}
-
-void Instructions::draw(sf::RenderWindow& Window)
-{
-	// Draw the background first
-	Window.draw(MBackgroundSprite);
-
-	Window.draw(MTitleText);
-	Window.draw(MInstructionsText);
-	Window.draw(MBackButton);
-	Window.draw(MBackText);
 }
 
 void Instructions::updateButtonPositions(const sf::Vector2u& WindowSize)

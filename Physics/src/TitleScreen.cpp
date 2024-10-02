@@ -55,6 +55,28 @@ void TitleScreen::init()
 	updateButtonPositions(sf::Vector2u(1600, 900)); // Default window size
 }
 
+void TitleScreen::draw(sf::RenderWindow& Window)
+{
+	// Draw background first
+	Window.draw(MBackgroundSprite);
+
+	// Draw title and buttons
+	Window.draw(MTitleText);
+	Window.draw(MPlayButton);
+	Window.draw(MInstructionsButton);
+	Window.draw(MQuitButton);
+
+	// Draw button text
+	Window.draw(MPlayText);
+	Window.draw(MInstructionsText);
+	Window.draw(MQuitText);
+}
+
+void TitleScreen::update(float DeltaTime)
+{
+	// No updates needed for title screen
+}
+
 void TitleScreen::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 {
 	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
@@ -76,28 +98,6 @@ void TitleScreen::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 			Window.close();
 		}
 	}
-}
-
-void TitleScreen::update(float DeltaTime)
-{
-	// No updates needed for title screen
-}
-
-void TitleScreen::draw(sf::RenderWindow& Window)
-{
-	// Draw background first
-	Window.draw(MBackgroundSprite);
-
-	// Draw title and buttons
-	Window.draw(MTitleText);
-	Window.draw(MPlayButton);
-	Window.draw(MInstructionsButton);
-	Window.draw(MQuitButton);
-
-	// Draw button text
-	Window.draw(MPlayText);
-	Window.draw(MInstructionsText);
-	Window.draw(MQuitText);
 }
 
 void TitleScreen::updateButtonPositions(const sf::Vector2u& WindowSize)

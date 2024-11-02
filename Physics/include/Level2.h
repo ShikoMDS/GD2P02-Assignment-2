@@ -54,7 +54,7 @@ private:
 	sf::Sprite MBackgroundSprite;
 
 	sf::Font MFont;
-	sf::Text MResumeButton, MRestartButton, MMenuButton, MNextLevelButton;
+	sf::Text MResumeButton, MRestartButton, MMenuButton;
 
 	sf::Vector2f MDragStart, MDragEnd;
 	sf::VertexArray MDragLine; // Visual indicator for drag direction

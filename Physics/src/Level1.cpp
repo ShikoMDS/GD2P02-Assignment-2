@@ -3,7 +3,7 @@
 Level1::Level1(SceneManager& Manager)
 	: MWorld(b2Vec2(0.0f, 9.8f)), // Set gravity for Box2D world
 	  MPixelsPerMetre(100.0f),
-	  MSceneManager(Manager), MBlockBody(nullptr), MGroundBody(nullptr), MProjectileBody(nullptr),
+	  MSceneManager(Manager), /*MBlockBody(nullptr),*/ MGroundBody(nullptr), MProjectileBody(nullptr),
 	  MRemainingProjectiles(0)
 // 100 pixels per meter for scaling
 {
@@ -39,7 +39,12 @@ Level1::Level1(SceneManager& Manager)
 	}
 
 	// Load block texture
-	if (!MBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png"))
+	if (!MDestructibleBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png"))
+	{
+		// Handle error
+	}
+	// Load block texture
+	if (!MBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Metal elements/elementMetal011.png"))
 	{
 		// Handle error
 	}
@@ -100,6 +105,7 @@ void Level1::init()
 	LGroundBox.SetAsBox(800.0f / MPixelsPerMetre, 10.0f / MPixelsPerMetre); // Half-width, half-height in metres
 	MGroundBody->CreateFixture(&LGroundBox, 0.0f); // Static ground with zero density
 
+	/*
 	// Define block body
 	b2BodyDef LBlockBodyDef;
 	LBlockBodyDef.type = b2_dynamicBody; // Dynamic body for falling block
@@ -118,6 +124,7 @@ void Level1::init()
 	MBlockShape.setSize(sf::Vector2f(100.0f, 100.0f)); // 100x100 pixels
 	MBlockShape.setOrigin(50.0f, 50.0f); // Set origin to center for proper rotation
 	MBlockShape.setTexture(&MBlockTexture); // Set texture for block
+	*/
 
 	// Define projectile body for Box2D
 	b2BodyDef LProjectileBodyDef;
@@ -146,6 +153,15 @@ void Level1::init()
 
 	initEnemies(LEnemyPositions);
 
+	// Initialize blocks at specific positions
+	// Add block data with destructible information
+	std::vector<std::tuple<sf::Vector2f, bool, int>> blockData = {
+		{ {800.0f, 800.0f}, true, 1 },   // Destructible block with health of 1
+		{ {900.0f, 800.0f}, true, 1 },     // Destructible block with health of 1
+		{ {1000.0f, 400.0f}, false, -1 }     // Regular block
+	};
+	initBlocks(blockData);
+
 	MRemainingProjectiles = 3; // Set number of projectiles
 
 	spawnProjectile(); // Spawn first projectile
@@ -162,8 +178,13 @@ void Level1::draw(sf::RenderWindow& Window)
 		Window.draw(Tile);
 	}
 
+	// Draw each block
+	for (const auto& block : MBlocks) {
+		Window.draw(block.shape);
+	}
+
 	// Draw block
-	Window.draw(MBlockShape);
+	//Window.draw(MBlockShape);
 
 	// Draw projectile if it's not removed
 	if (!isProjectileStopped)
@@ -324,6 +345,35 @@ void Level1::update(const float DeltaTime)
 	{
 		MWorld.Step(DeltaTime, 8, 3); // Update Box2D world
 
+		for (auto it = MBlocks.begin(); it != MBlocks.end(); ) {
+			Block& block = *it;
+
+			if (block.isDestructible) {
+				b2Vec2 velocity = block.body->GetLinearVelocity();
+				float impactForce = velocity.Length();
+
+				// Reduce health based on impact force threshold
+				if (impactForce > 2.0f) {  // Adjust threshold as needed
+					block.health--;
+
+					// If health is zero, mark for deletion
+					if (block.health <= 0) {
+						MWorld.DestroyBody(block.body);  // Remove from physics world
+						it = MBlocks.erase(it);  // Remove from vector
+						continue;
+					}
+				}
+			}
+
+			// Update position and rotation for rendering
+			b2Vec2 position = block.body->GetPosition();
+			float angle = block.body->GetAngle();
+			block.shape.setPosition(position.x * MPixelsPerMetre, position.y * MPixelsPerMetre);
+			block.shape.setRotation(angle * 180.0f / b2_pi);
+
+			++it;
+		}
+
 		// Update enemy positions
 		for (auto& Enemy : MEnemies)
 		{
@@ -385,11 +435,13 @@ void Level1::update(const float DeltaTime)
 		// Check if all enemies are dead
 		checkEnemiesAlive();
 
+		/*
 		// Update block and projectile positions and rotations
 		const b2Vec2 LPosition = MBlockBody->GetPosition();
 		const float LAngle = MBlockBody->GetAngle();
 		MBlockShape.setPosition(LPosition.x * MPixelsPerMetre, LPosition.y * MPixelsPerMetre);
 		MBlockShape.setRotation(LAngle * 180.0f / 3.14159f);
+		*/
 
 		// Only update projectile position if it hasn't been removed
 		if (!isProjectileStopped)
@@ -530,6 +582,40 @@ void Level1::updateButtonPositions(const sf::Vector2u& WindowSize)
 void Level1::togglePause()
 {
 	isPaused = !isPaused;
+}
+
+void Level1::initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& blockData) {
+	for (const auto& [pos, destructible, health] : blockData) {
+		Block block;
+
+		// Set up the SFML rectangle shape
+		block.shape.setSize(sf::Vector2f(100.0f, 100.0f));
+		block.shape.setOrigin(50.0f, 50.0f);
+		block.shape.setTexture(destructible ? &MDestructibleBlockTexture : &MBlockTexture); // Use a different texture for destructible blocks
+
+		// Set up Box2D body
+		b2BodyDef blockBodyDef;
+		blockBodyDef.type = b2_dynamicBody;
+		blockBodyDef.position.Set(pos.x / MPixelsPerMetre, pos.y / MPixelsPerMetre);
+		block.body = MWorld.CreateBody(&blockBodyDef);
+
+		// Set up Box2D shape and fixture
+		b2PolygonShape blockPhysicsShape;
+		blockPhysicsShape.SetAsBox(50.0f / MPixelsPerMetre, 50.0f / MPixelsPerMetre);
+
+		b2FixtureDef blockFixtureDef;
+		blockFixtureDef.shape = &blockPhysicsShape;
+		blockFixtureDef.density = 1.0f;
+		blockFixtureDef.friction = 0.3f;
+		block.body->CreateFixture(&blockFixtureDef);
+
+		// Set destructible properties
+		block.isDestructible = destructible;
+		block.health = destructible ? health : -1;  // Non-destructible blocks have no health
+
+		// Add to vector
+		MBlocks.push_back(block);
+	}
 }
 
 void Level1::initEnemies(const std::vector<sf::Vector2f>& Positions)

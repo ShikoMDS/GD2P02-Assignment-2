@@ -58,9 +58,6 @@ Level2::Level2(SceneManager& Manager)
 	MRestartButton.setString("Restart");
 	MMenuButton.setFont(MFont);
 	MMenuButton.setString("Menu");
-	MNextLevelButton.setFont(MFont); // Use preloaded font
-	MNextLevelButton.setString("Next Level");
-	MNextLevelButton.setCharacterSize(50); // Initial text size
 
 	// Load projectile texture
 	if (!MProjectileTexture.loadFromFile("resources/kenney animal pack redux/PNG/Round (outline)/frog.png"))
@@ -210,21 +207,14 @@ void Level2::draw(sf::RenderWindow& Window)
 			static_cast<float>(Window.getSize().y) / 4.0f); // Centered title
 		Window.draw(LWinText);
 
-		// Draw "Next Level" button
-		MNextLevelButton.setCharacterSize(static_cast<unsigned int>(50 * LScaleY));
-		sf::FloatRect LNextBounds = MNextLevelButton.getLocalBounds();
-		MNextLevelButton.setOrigin(LNextBounds.width / 2.0f, LNextBounds.height / 2.0f);
-		MNextLevelButton.setPosition(static_cast<float>(Window.getSize().x) / 2.0f,
-			static_cast<float>(Window.getSize().y) / 2.0f); // Centered under title
-		Window.draw(MNextLevelButton);
+		// Remove the "Next Level" button code to avoid displaying it
 
 		// Draw "Restart" button
 		MRestartButton.setCharacterSize(static_cast<unsigned int>(50 * LScaleY));
 		sf::FloatRect LRestartBounds = MRestartButton.getLocalBounds();
 		MRestartButton.setOrigin(LRestartBounds.width / 2.0f, LRestartBounds.height / 2.0f);
 		MRestartButton.setPosition(static_cast<float>(Window.getSize().x) / 2.0f,
-			static_cast<float>(Window.getSize().y) / 2.0f + 100 * LScaleY);
-		// Centered and spaced
+			static_cast<float>(Window.getSize().y) / 2.0f + 100 * LScaleY); // Centered and spaced
 		Window.draw(MRestartButton);
 
 		// Draw "Menu" button
@@ -485,12 +475,7 @@ void Level2::handleInput(sf::RenderWindow& Window, sf::Event& Event)
 		if (Event.type == sf::Event::MouseButtonReleased)
 		{
 			const sf::Vector2i LMousePos = sf::Mouse::getPosition(Window);
-			if (MNextLevelButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x),
-				static_cast<float>(LMousePos.y)))
-			{
-				MSceneManager.setScene(std::make_shared<Level2>(MSceneManager)); // Go to next level (Level2)
-			}
-			else if (MRestartButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x),
+			if (MRestartButton.getGlobalBounds().contains(static_cast<float>(LMousePos.x),
 				static_cast<float>(LMousePos.y)))
 			{
 				MSceneManager.setScene(std::make_shared<Level2>(MSceneManager)); // Restart level

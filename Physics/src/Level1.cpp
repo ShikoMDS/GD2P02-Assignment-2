@@ -3,7 +3,7 @@
 Level1::Level1(SceneManager& Manager)
 	: MWorld(b2Vec2(0.0f, 9.8f)), // Set gravity for Box2D world
 	  MPixelsPerMetre(100.0f),
-	  MSceneManager(Manager), /*MBlockBody(nullptr),*/ MGroundBody(nullptr), MProjectileBody(nullptr),
+	  MSceneManager(Manager), MGroundBody(nullptr), MProjectileBody(nullptr),
 	  MRemainingProjectiles(0)
 // 100 pixels per meter for scaling
 {
@@ -105,27 +105,6 @@ void Level1::init()
 	LGroundBox.SetAsBox(800.0f / MPixelsPerMetre, 10.0f / MPixelsPerMetre); // Half-width, half-height in metres
 	MGroundBody->CreateFixture(&LGroundBox, 0.0f); // Static ground with zero density
 
-	/*
-	// Define block body
-	b2BodyDef LBlockBodyDef;
-	LBlockBodyDef.type = b2_dynamicBody; // Dynamic body for falling block
-	LBlockBodyDef.position.Set(800.0f / MPixelsPerMetre, 200.0f / MPixelsPerMetre); // Centered at top
-	MBlockBody = MWorld.CreateBody(&LBlockBodyDef);
-
-	b2PolygonShape LBlockPhysicsShape;
-	LBlockPhysicsShape.SetAsBox(50.0f / MPixelsPerMetre, 50.0f / MPixelsPerMetre); // 50x50 pixel block
-	b2FixtureDef LBlockFixtureDef;
-	LBlockFixtureDef.shape = &LBlockPhysicsShape;
-	LBlockFixtureDef.density = 1.0f;
-	LBlockFixtureDef.friction = 0.3f;
-	MBlockBody->CreateFixture(&LBlockFixtureDef);
-
-	// Set up visual representation for block
-	MBlockShape.setSize(sf::Vector2f(100.0f, 100.0f)); // 100x100 pixels
-	MBlockShape.setOrigin(50.0f, 50.0f); // Set origin to center for proper rotation
-	MBlockShape.setTexture(&MBlockTexture); // Set texture for block
-	*/
-
 	// Define projectile body for Box2D
 	b2BodyDef LProjectileBodyDef;
 	LProjectileBodyDef.type = b2_dynamicBody;
@@ -182,9 +161,6 @@ void Level1::draw(sf::RenderWindow& Window)
 	for (const auto& block : MBlocks) {
 		Window.draw(block.shape);
 	}
-
-	// Draw block
-	//Window.draw(MBlockShape);
 
 	// Draw projectile if it's not removed
 	if (!isProjectileStopped)
@@ -339,33 +315,28 @@ void Level1::draw(sf::RenderWindow& Window)
 	}
 }
 
-void Level1::update(const float DeltaTime)
-{
-	if (!isPaused && !isWin && !isLose)
-	{
-		MWorld.Step(DeltaTime, 8, 3); // Update Box2D world
+void Level1::update(const float DeltaTime) {
+	if (!isPaused && !isWin && !isLose) {
+		// Increase Box2D timestep parameters to handle high-speed collisions more accurately
+		MWorld.Step(DeltaTime, 8, 8); // Balanced iterations
 
-		for (auto it = MBlocks.begin(); it != MBlocks.end(); ) {
+		// Block and projectile collision update logic
+		for (auto it = MBlocks.begin(); it != MBlocks.end();) {
 			Block& block = *it;
-
 			if (block.isDestructible) {
 				b2Vec2 velocity = block.body->GetLinearVelocity();
 				float impactForce = velocity.Length();
 
-				// Reduce health based on impact force threshold
-				if (impactForce > 2.0f) {  // Adjust threshold as needed
+				// Adjust the force threshold as needed
+				if (impactForce > 2.0f) {
 					block.health--;
-
-					// If health is zero, mark for deletion
 					if (block.health <= 0) {
-						MWorld.DestroyBody(block.body);  // Remove from physics world
-						it = MBlocks.erase(it);  // Remove from vector
+						MWorld.DestroyBody(block.body);
+						it = MBlocks.erase(it);
 						continue;
 					}
 				}
 			}
-
-			// Update position and rotation for rendering
 			b2Vec2 position = block.body->GetPosition();
 			float angle = block.body->GetAngle();
 			block.shape.setPosition(position.x * MPixelsPerMetre, position.y * MPixelsPerMetre);
@@ -374,83 +345,40 @@ void Level1::update(const float DeltaTime)
 			++it;
 		}
 
-		// Update enemy positions
-		for (auto& Enemy : MEnemies)
-		{
-			if (Enemy.isAlive)
-			{
-				const b2Vec2 LEnemyPos = Enemy.MEnemyBody->GetPosition();
-				Enemy.MEnemySprite.setPosition(LEnemyPos.x * MPixelsPerMetre, LEnemyPos.y * MPixelsPerMetre);
-				Enemy.MEnemySprite.setRotation(Enemy.MEnemyBody->GetAngle() * 180.0f / b2_pi);
-
-				// Check if enemy is off screen (left and right)
-				if (LEnemyPos.x * MPixelsPerMetre < MScreenLeftBound || LEnemyPos.x * MPixelsPerMetre >
-					MScreenRightBound)
-				{
-					MWorld.DestroyBody(Enemy.MEnemyBody); // Remove from world
-					Enemy.isAlive = false; // Mark enemy as dead
-				}
-			}
-		}
-
-		// Update projectile positions
-		if (isProjectileLaunched && !isProjectileStopped)
-		{
-			const b2Vec2 LVelocity = MProjectileBody->GetLinearVelocity();
-
-			// Check if projectile velocity is below a threshold
-			if (LVelocity.Length() < 0.1f)
-			{
+		// Remaining projectile update and collision handling
+		if (isProjectileLaunched && !isProjectileStopped) {
+			b2Vec2 velocity = MProjectileBody->GetLinearVelocity();
+			if (velocity.Length() < 0.1f) {
 				MStationaryTime += DeltaTime;
 			}
-			else
-			{
-				MStationaryTime = 0.0f; // Reset timer if projectile moves again
+			else {
+				MStationaryTime = 0.0f;
 			}
-
-			// If projectile has been stationary for more than 3 seconds, remove it
-			if (MStationaryTime > 3.0f)
-			{
+			if (MStationaryTime > 3.0f) {
 				isProjectileStopped = true;
 				MWorld.DestroyBody(MProjectileBody);
-				MProjectileShape.setPosition(-100, -100); // Move projectile shape off-screen
-				spawnProjectile(); // Spawn next projectile
+				MProjectileShape.setPosition(-100, -100); // Off-screen
+				spawnProjectile();
 			}
-
-			// Check if projectile is off screen (only left and right)
-			const b2Vec2 LProjectilePos = MProjectileBody->GetPosition();
-			if (LProjectilePos.x * MPixelsPerMetre < MScreenLeftBound || LProjectilePos.x * MPixelsPerMetre >
-				MScreenRightBound)
-			{
+			b2Vec2 projectilePosition = MProjectileBody->GetPosition();
+			if (projectilePosition.x * MPixelsPerMetre < MScreenLeftBound || projectilePosition.x * MPixelsPerMetre > MScreenRightBound) {
 				isProjectileStopped = true;
-				MWorld.DestroyBody(MProjectileBody); // Remove projectile from Box2D world
-				MProjectileShape.setPosition(-100, -100); // Move projectile shape off-screen
-				spawnProjectile(); // Spawn next projectile
+				MWorld.DestroyBody(MProjectileBody);
+				MProjectileShape.setPosition(-100, -100);
+				spawnProjectile();
 			}
 		}
 
-		// Handle collisions
+		// General collision handling
 		handleCollisions();
-
-		// Check if all enemies are dead
 		checkEnemiesAlive();
 
-		/*
-		// Update block and projectile positions and rotations
-		const b2Vec2 LPosition = MBlockBody->GetPosition();
-		const float LAngle = MBlockBody->GetAngle();
-		MBlockShape.setPosition(LPosition.x * MPixelsPerMetre, LPosition.y * MPixelsPerMetre);
-		MBlockShape.setRotation(LAngle * 180.0f / 3.14159f);
-		*/
-
-		// Only update projectile position if it hasn't been removed
-		if (!isProjectileStopped)
-		{
-			const b2Vec2 LProjectilePosition = MProjectileBody->GetPosition();
-			const float LProjectileAngle = MProjectileBody->GetAngle();
-			MProjectileShape.setPosition(LProjectilePosition.x * MPixelsPerMetre,
-			                             LProjectilePosition.y * MPixelsPerMetre);
-			MProjectileShape.setRotation(LProjectileAngle * 180.0f / 3.14159f);
+		// Projectile rendering update
+		if (!isProjectileStopped) {
+			b2Vec2 projectilePosition = MProjectileBody->GetPosition();
+			float projectileAngle = MProjectileBody->GetAngle();
+			MProjectileShape.setPosition(projectilePosition.x * MPixelsPerMetre, projectilePosition.y * MPixelsPerMetre);
+			MProjectileShape.setRotation(projectileAngle * 180.0f / b2_pi);
 		}
 	}
 }
@@ -678,12 +606,12 @@ void Level1::spawnProjectile()
 		// Create a new projectile
 		b2BodyDef LProjectileBodyDef;
 		LProjectileBodyDef.type = b2_dynamicBody;
-		LProjectileBodyDef.position.Set(100.0f / MPixelsPerMetre, 800.0f / MPixelsPerMetre);
-		// Starting position for each projectile
+		LProjectileBodyDef.position.Set(100.0f / MPixelsPerMetre, 700.0f / MPixelsPerMetre);  // Spawn at 700 units high
+		LProjectileBodyDef.bullet = true;
 		MProjectileBody = MWorld.CreateBody(&LProjectileBodyDef);
 
 		// Add linear damping to slow down projectile over time (resistance)
-		MProjectileBody->SetLinearDamping(0.8f);
+		MProjectileBody->SetLinearDamping(0.5f);
 
 		b2CircleShape LProjectileShapeDef;
 		LProjectileShapeDef.m_radius = 25.0f / MPixelsPerMetre; // Set radius of projectile
@@ -692,8 +620,11 @@ void Level1::spawnProjectile()
 		LProjectileFixtureDef.shape = &LProjectileShapeDef;
 		LProjectileFixtureDef.density = 1.0f;
 		LProjectileFixtureDef.friction = 0.8f;
-		//LProjectileFixtureDef.restitution = 0.2f; // Bounce
+		LProjectileFixtureDef.restitution = 0.8f; // Bounce
 		MProjectileBody->CreateFixture(&LProjectileFixtureDef);
+
+		// Disable gravity initially
+		MProjectileBody->SetGravityScale(0.0f);
 
 		// Reset projectile flags and decrease projectile count
 		isProjectileLaunched = false;
@@ -722,6 +653,9 @@ void Level1::launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End
 	const b2Vec2 LLaunchForce((LForce.x * 0.75f) / MPixelsPerMetre, (LForce.y * 0.75f) / MPixelsPerMetre);
 	MProjectileBody->ApplyLinearImpulseToCenter(LLaunchForce, true);
 
+	// Enable gravity for the projectile after launch
+	MProjectileBody->SetGravityScale(1.0f);
+
 	// Mark projectile as launched
 	isProjectileLaunched = true;
 	isDragging = false; // Disable dragging after launch
@@ -730,56 +664,47 @@ void Level1::launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End
 	MTrajectoryPoints.clear();
 }
 
-void Level1::calculateParabolicTrajectory(const sf::Vector2f& Start, const sf::Vector2f& End)
+
+void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end)
 {
-	// Clear previous trajectory points
-	MTrajectoryPoints.clear();
+    // Clear previous trajectory points
+    MTrajectoryPoints.clear();
 
-	// Start from projectile's current position
-	const sf::Vector2f LProjectilePosition = MProjectileShape.getPosition();
+    // Start from projectile's current position
+    const sf::Vector2f LProjectilePosition = MProjectileShape.getPosition();
 
-	// Calculate direction and velocity, reversed to get proper trajectory
-	const sf::Vector2f LDirection = Start - End; // Reverse direction so it's from mouse to projectile
-	const float LVelocityX = (LDirection.x * 3.0f) / MPixelsPerMetre; // Increased by a factor of 3
-	const float LVelocityY = (LDirection.y * 3.0f) / MPixelsPerMetre; // Y-axis is no longer inverted
+    // Calculate direction and velocity
+    const sf::Vector2f LDirection = start - end;
+    const float LVelocityX = (LDirection.x * 2.0f) / MPixelsPerMetre;  // Adjusted horizontal scaling factor
+    const float LVelocityY = (LDirection.y * 3.0f) / MPixelsPerMetre;  // Kept vertical scaling as before
 
-	const float LGravity = MWorld.GetGravity().y; // Get gravity from Box2D world
+    const float LGravity = MWorld.GetGravity().y;
 
-	constexpr int LNumPoints = 30; // Number of points to simulate for trajectory
-	constexpr float LTimeStep = 0.1f; // Time step for each point in simulation
+    constexpr int LNumPoints = 30;
+    constexpr float LTimeStep = 0.1f;
 
-	bool LApexReached = false; // Flag to detect apex
+    for (int I = 0; I < LNumPoints; ++I)
+    {
+        const float T = static_cast<float>(I) * LTimeStep;
 
-	for (int I = 0; I < LNumPoints; ++I)
-	{
-		const float T = static_cast<float>(I) * LTimeStep;
+        // Calculate projectile position at time T
+        const float X = LVelocityX * T;
+        const float Y = LVelocityY * T + 0.5f * LGravity * T * T;
 
-		// Calculate vertical velocity at time t
-		const float LCurrentVelocityY = LVelocityY + LGravity * T;
+        sf::CircleShape LPoint(5.0f);
+        LPoint.setFillColor(sf::Color::Red);
+        LPoint.setPosition(
+            (LProjectilePosition.x / MPixelsPerMetre + X) * MPixelsPerMetre,
+            (LProjectilePosition.y / MPixelsPerMetre + Y) * MPixelsPerMetre
+        );
 
-		// Stop drawing points if apex is reached (when vertical velocity is near zero)
-		if (LCurrentVelocityY > 0 && !LApexReached)
-		{
-			LApexReached = true; // Mark apex as reached and stop drawing further points
-		}
+        MTrajectoryPoints.push_back(LPoint);
 
-		// Stop drawing trajectory after apex
-		if (LApexReached)
-		{
-			break;
-		}
-
-		// Calculate position of projectile at time t
-		const float X = LVelocityX * T;
-		const float Y = LVelocityY * T + 0.5f * LGravity * T * T;
-
-		sf::CircleShape LPoint(5.0f); // Increased size of point for more visibility
-		LPoint.setFillColor(sf::Color::Red);
-		LPoint.setPosition((LProjectilePosition.x / MPixelsPerMetre + X) * MPixelsPerMetre,
-		                   (LProjectilePosition.y / MPixelsPerMetre + Y) * MPixelsPerMetre);
-
-		MTrajectoryPoints.push_back(LPoint);
-	}
+        //// Stop at the peak to avoid overshooting (optional)
+        //if (I > 0 && MTrajectoryPoints[I].getPosition().y > MTrajectoryPoints[I - 1].getPosition().y) {
+        //    break;
+        //}
+    }
 }
 
 void Level1::handleCollisions()

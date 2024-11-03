@@ -54,7 +54,6 @@ private:
 	float MPixelsPerMetre, MStationaryTime, MScreenLeftBound, MScreenRightBound;
 	SceneManager& MSceneManager;
 
-	//b2Body* MBlockBody;
 	b2Body* MGroundBody;
 	b2Body* MProjectileBody;
 

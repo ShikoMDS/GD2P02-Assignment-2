@@ -39,7 +39,7 @@ Level2::Level2(SceneManager& Manager)
 	}
 
 	// Load block texture
-	if (!MBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Wood elements/elementWood010.png"))
+	if (!MBlockTexture.loadFromFile("resources/kenney physics assets/PNG/Metal elements/elementMetal011.png"))
 	{
 		// Handle error
 	}

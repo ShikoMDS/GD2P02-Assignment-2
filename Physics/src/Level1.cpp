@@ -1,9 +1,12 @@
 #include "Level1.h"
 
 Level1::Level1(SceneManager& Manager)
-	: MWorld(b2Vec2(0.0f, 9.8f)), // Set gravity for Box2D world
-	  MPixelsPerMetre(100.0f),
-	  MSceneManager(Manager), MGroundBody(nullptr), MProjectileBody(nullptr),
+	: MSceneManager(Manager), MWorld(b2Vec2(0.0f, 9.8f)), MGroundBody(nullptr), MProjectileBody(nullptr),
+	  MSeesawBase(nullptr),
+	  MSeesawPlank1(nullptr),
+	  // Set gravity for Box2D world
+	  MSeesawPlank2(nullptr),
+	  MSeesawJoint(nullptr), MPlankJoint(nullptr), MPixelsPerMetre(100.0f),
 	  MRemainingProjectiles(0)
 // 100 pixels per meter for scaling
 {
@@ -134,20 +137,23 @@ void Level1::init()
 
 	// Initialize blocks at specific positions
 	// Add block data with destructible information
-	std::vector<std::tuple<sf::Vector2f, bool, int>> blockData = {
-		{ {800.0f, 800.0f}, true, 1 },   // Destructible block with health of 1
-		{ {425.0f, 600.0f}, true, 1 },     // Destructible block with health of 1
-		{ {575.0f, 600.0f}, true, 1 },     // Destructible block with health of 1
-		{ {900.0f, 800.0f}, true, 1 },     // Destructible block with health of 1
-		{ {1000.0f, 800.0f}, false, -1 },     // Regular block
-		{ {450.0f, 505.0f}, false, -1 },     // Regular block
-		{ {550.0f, 505.0f}, false, -1 },     // Regular block
-		{ {425.0f, 695.0f}, false, -1 },     // Regular block
-		{ {575.0f, 695.0f}, false, -1 }     // Regular block
+	const std::vector<std::tuple<sf::Vector2f, bool, int>> LBlockData = {
+		// Destructible blocks
+		{{800.0f, 800.0f}, true, 1},
+		{{425.0f, 600.0f}, true, 1},
+		{{575.0f, 600.0f}, true, 1},
+		{{900.0f, 800.0f}, true, 1},
+		// Regular blocks
+		{{850.0f, 705.0f}, false, -1},
+		{{450.0f, 505.0f}, false, -1},
+		{{550.0f, 505.0f}, false, -1},
+		{{425.0f, 695.0f}, false, -1},
+		{{575.0f, 695.0f}, false, -1},
+		{{500.0f, 410.0f}, false, -1}
 	};
-	initBlocks(blockData);
+	initBlocks(LBlockData);
 
-	initSeesaw();  // Initialize seesaw here
+	initSeesaw();
 
 	MRemainingProjectiles = 3; // Set number of projectiles
 
@@ -166,8 +172,9 @@ void Level1::draw(sf::RenderWindow& Window)
 	}
 
 	// Draw each block
-	for (const auto& block : MBlocks) {
-		Window.draw(block.shape);
+	for (const auto& Block : MBlocks)
+	{
+		Window.draw(Block.MShape);
 	}
 
 	// Draw seesaw components
@@ -328,73 +335,84 @@ void Level1::draw(sf::RenderWindow& Window)
 	}
 }
 
-void Level1::update(const float DeltaTime) {
-	if (!isPaused && !isWin && !isLose) {
-		// Increase Box2D timestep parameters to handle high-speed collisions more accurately
-		MWorld.Step(DeltaTime, 8, 8); // Balanced iterations
+void Level1::update(const float DeltaTime)
+{
+	if (!isPaused && !isWin && !isLose)
+	{
+		MWorld.Step(DeltaTime, 8, 8);
 
-		// Block and projectile collision update logic
-		for (auto it = MBlocks.begin(); it != MBlocks.end();) {
-			Block& block = *it;
-			if (block.isDestructible) {
-				b2Vec2 velocity = block.body->GetLinearVelocity();
-				float impactForce = velocity.Length();
+		// Block and projectile collision update 
+		for (auto It = MBlocks.begin(); It != MBlocks.end();)
+		{
+			Block& Block = *It;
+			if (Block.isDestructible)
+			{
+				b2Vec2 Velocity = Block.MBody->GetLinearVelocity();
+				const float ImpactForce = Velocity.Length();
 
-				// Adjust the force threshold as needed
-				if (impactForce > 2.0f) {
-					block.health--;
-					if (block.health <= 0) {
-						MWorld.DestroyBody(block.body);
-						it = MBlocks.erase(it);
+				// Break threshold
+				if (ImpactForce > 2.0f)
+				{
+					Block.MHealth--;
+					if (Block.MHealth <= 0)
+					{
+						MWorld.DestroyBody(Block.MBody);
+						It = MBlocks.erase(It);
 						continue;
 					}
 				}
 			}
-			b2Vec2 position = block.body->GetPosition();
-			float angle = block.body->GetAngle();
-			block.shape.setPosition(position.x * MPixelsPerMetre, position.y * MPixelsPerMetre);
-			block.shape.setRotation(angle * 180.0f / b2_pi);
+			const b2Vec2 Position = Block.MBody->GetPosition();
+			const float Angle = Block.MBody->GetAngle();
+			Block.MShape.setPosition(Position.x * MPixelsPerMetre, Position.y * MPixelsPerMetre);
+			Block.MShape.setRotation(Angle * 180.0f / b2_pi);
 
-			++it;
+			++It;
 		}
 
 		// Update and draw seesaw components
 		if (MSeesawBase && MSeesawPlank1 && MSeesawPlank2)
 		{
 			// Update base position
-			b2Vec2 basePos = MSeesawBase->GetPosition();
-			MSeesawBaseSprite.setPosition(basePos.x * MPixelsPerMetre, basePos.y * MPixelsPerMetre);
+			const b2Vec2 BasePos = MSeesawBase->GetPosition();
+			MSeesawBaseSprite.setPosition(BasePos.x * MPixelsPerMetre, BasePos.y * MPixelsPerMetre);
 
 			// Update plank 1 position and rotation
-			b2Vec2 plank1Pos = MSeesawPlank1->GetPosition();
-			float plank1Angle = MSeesawPlank1->GetAngle();
-			MSeesawPlankSprite1.setPosition(plank1Pos.x * MPixelsPerMetre, plank1Pos.y * MPixelsPerMetre);
-			MSeesawPlankSprite1.setRotation(plank1Angle * 180.0f / b2_pi);
+			const b2Vec2 Plank1Pos = MSeesawPlank1->GetPosition();
+			const float Plank1Angle = MSeesawPlank1->GetAngle();
+			MSeesawPlankSprite1.setPosition(Plank1Pos.x * MPixelsPerMetre, Plank1Pos.y * MPixelsPerMetre);
+			MSeesawPlankSprite1.setRotation(Plank1Angle * 180.0f / b2_pi);
 
 			// Update plank 2 position and rotation
-			b2Vec2 plank2Pos = MSeesawPlank2->GetPosition();
-			float plank2Angle = MSeesawPlank2->GetAngle();
-			MSeesawPlankSprite2.setPosition(plank2Pos.x * MPixelsPerMetre, plank2Pos.y * MPixelsPerMetre);
-			MSeesawPlankSprite2.setRotation(plank2Angle * 180.0f / b2_pi);
+			const b2Vec2 Plank2Pos = MSeesawPlank2->GetPosition();
+			const float Plank2Angle = MSeesawPlank2->GetAngle();
+			MSeesawPlankSprite2.setPosition(Plank2Pos.x * MPixelsPerMetre, Plank2Pos.y * MPixelsPerMetre);
+			MSeesawPlankSprite2.setRotation(Plank2Angle * 180.0f / b2_pi);
 		}
 
 		// Remaining projectile update and collision handling
-		if (isProjectileLaunched && !isProjectileStopped) {
-			b2Vec2 velocity = MProjectileBody->GetLinearVelocity();
-			if (velocity.Length() < 0.1f) {
+		if (isProjectileLaunched && !isProjectileStopped)
+		{
+			const b2Vec2 Velocity = MProjectileBody->GetLinearVelocity();
+			if (Velocity.Length() < 0.1f)
+			{
 				MStationaryTime += DeltaTime;
 			}
-			else {
+			else
+			{
 				MStationaryTime = 0.0f;
 			}
-			if (MStationaryTime > 3.0f) {
+			if (MStationaryTime > 3.0f)
+			{
 				isProjectileStopped = true;
 				MWorld.DestroyBody(MProjectileBody);
 				MProjectileShape.setPosition(-100, -100); // Off-screen
 				spawnProjectile();
 			}
-			b2Vec2 projectilePosition = MProjectileBody->GetPosition();
-			if (projectilePosition.x * MPixelsPerMetre < MScreenLeftBound || projectilePosition.x * MPixelsPerMetre > MScreenRightBound) {
+			const b2Vec2 ProjectilePosition = MProjectileBody->GetPosition();
+			if (ProjectilePosition.x * MPixelsPerMetre < MScreenLeftBound || ProjectilePosition.x * MPixelsPerMetre >
+				MScreenRightBound)
+			{
 				isProjectileStopped = true;
 				MWorld.DestroyBody(MProjectileBody);
 				MProjectileShape.setPosition(-100, -100);
@@ -407,11 +425,13 @@ void Level1::update(const float DeltaTime) {
 		checkEnemiesAlive();
 
 		// Projectile rendering update
-		if (!isProjectileStopped) {
-			b2Vec2 projectilePosition = MProjectileBody->GetPosition();
-			float projectileAngle = MProjectileBody->GetAngle();
-			MProjectileShape.setPosition(projectilePosition.x * MPixelsPerMetre, projectilePosition.y * MPixelsPerMetre);
-			MProjectileShape.setRotation(projectileAngle * 180.0f / b2_pi);
+		if (!isProjectileStopped)
+		{
+			const b2Vec2 ProjectilePosition = MProjectileBody->GetPosition();
+			const float ProjectileAngle = MProjectileBody->GetAngle();
+			MProjectileShape.setPosition(ProjectilePosition.x * MPixelsPerMetre,
+			                             ProjectilePosition.y * MPixelsPerMetre);
+			MProjectileShape.setRotation(ProjectileAngle * 180.0f / b2_pi);
 		}
 	}
 }
@@ -557,110 +577,115 @@ void Level1::initSeesaw()
 
 	// Set up base sprite
 	MSeesawBaseSprite.setTexture(MSeesawBaseTexture);
-	MSeesawBaseSprite.setOrigin(MSeesawBaseSprite.getLocalBounds().width / 2, MSeesawBaseSprite.getLocalBounds().height);
-	MSeesawBaseSprite.setPosition(500.0f, 850.0f);  // Adjusted position
+	MSeesawBaseSprite.setOrigin(MSeesawBaseSprite.getLocalBounds().width / 2,
+	                            MSeesawBaseSprite.getLocalBounds().height);
+	MSeesawBaseSprite.setPosition(500.0f, 850.0f);
 
 	// Define base body in Box2D
-	b2BodyDef baseBodyDef;
-	baseBodyDef.position.Set(500.0f / MPixelsPerMetre, 850.0f / MPixelsPerMetre);
-	MSeesawBase = MWorld.CreateBody(&baseBodyDef);
+	b2BodyDef LBaseBodyDef;
+	LBaseBodyDef.position.Set(500.0f / MPixelsPerMetre, 850.0f / MPixelsPerMetre);
+	MSeesawBase = MWorld.CreateBody(&LBaseBodyDef);
 
-	b2PolygonShape baseShape;
-	b2Vec2 vertices[3];
-	vertices[0].Set(0, -30.0f / MPixelsPerMetre);   // Top of the triangle (upwards in screen space)
-	vertices[1].Set(-30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre);  // Bottom left
-	vertices[2].Set(30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre);   // Bottom right
-	baseShape.Set(vertices, 3);
+	b2PolygonShape LBaseShape;
+	b2Vec2 LVertices[3];
+	LVertices[0].Set(0, -30.0f / MPixelsPerMetre); // Top of the triangle
+	LVertices[1].Set(-30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre); // Bottom left
+	LVertices[2].Set(30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre); // Bottom right
+	LBaseShape.Set(LVertices, 3);
 
-	b2FixtureDef baseFixtureDef;
-	baseFixtureDef.shape = &baseShape;
-	baseFixtureDef.density = 1.0f;
-	baseFixtureDef.friction = 0.5f;
-	MSeesawBase->CreateFixture(&baseFixtureDef);
+	b2FixtureDef LBaseFixtureDef;
+	LBaseFixtureDef.shape = &LBaseShape;
+	LBaseFixtureDef.density = 1.0f;
+	LBaseFixtureDef.friction = 0.5f;
+	MSeesawBase->CreateFixture(&LBaseFixtureDef);
 
 	// Set up plank sprites with the same texture
 	MSeesawPlankSprite1.setTexture(MSeesawPlankTexture);
-	MSeesawPlankSprite1.setOrigin(MSeesawPlankSprite1.getLocalBounds().width / 2, MSeesawPlankSprite1.getLocalBounds().height / 2);
+	MSeesawPlankSprite1.setOrigin(MSeesawPlankSprite1.getLocalBounds().width / 2,
+	                              MSeesawPlankSprite1.getLocalBounds().height / 2);
 
 	MSeesawPlankSprite2.setTexture(MSeesawPlankTexture);
-	MSeesawPlankSprite2.setOrigin(MSeesawPlankSprite2.getLocalBounds().width / 2, MSeesawPlankSprite2.getLocalBounds().height / 2);
+	MSeesawPlankSprite2.setOrigin(MSeesawPlankSprite2.getLocalBounds().width / 2,
+	                              MSeesawPlankSprite2.getLocalBounds().height / 2);
 
 	// Define the two plank bodies in Box2D
-	b2BodyDef plank1BodyDef;
-	plank1BodyDef.type = b2_dynamicBody;
-	plank1BodyDef.position.Set((500.0f - 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre);  // Left plank
-	MSeesawPlank1 = MWorld.CreateBody(&plank1BodyDef);
+	b2BodyDef LPlank1BodyDef;
+	LPlank1BodyDef.type = b2_dynamicBody;
+	LPlank1BodyDef.position.Set((500.0f - 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre); // Left plank
+	MSeesawPlank1 = MWorld.CreateBody(&LPlank1BodyDef);
 
-	b2BodyDef plank2BodyDef;
-	plank2BodyDef.type = b2_dynamicBody;
-	plank2BodyDef.position.Set((500.0f + 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre);  // Right plank
-	MSeesawPlank2 = MWorld.CreateBody(&plank2BodyDef);
+	b2BodyDef LPlank2BodyDef;
+	LPlank2BodyDef.type = b2_dynamicBody;
+	LPlank2BodyDef.position.Set((500.0f + 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre); // Right plank
+	MSeesawPlank2 = MWorld.CreateBody(&LPlank2BodyDef);
 
 	// Define plank shapes
-	b2PolygonShape plankShape;
-	plankShape.SetAsBox(100.0f / MPixelsPerMetre, 10.0f / MPixelsPerMetre);  // Each plank is half the full length
+	b2PolygonShape LPlankShape;
+	LPlankShape.SetAsBox(100.0f / MPixelsPerMetre, 10.0f / MPixelsPerMetre);
 
 	// Create fixtures for each plank
-	b2FixtureDef plankFixtureDef;
-	plankFixtureDef.shape = &plankShape;
-	plankFixtureDef.density = 1.0f;
-	plankFixtureDef.friction = 0.5f;
-	plankFixtureDef.restitution = 0.3f;  // Optional, add bounce if desired
-	MSeesawPlank1->CreateFixture(&plankFixtureDef);
-	MSeesawPlank2->CreateFixture(&plankFixtureDef);
+	b2FixtureDef LPlankFixtureDef;
+	LPlankFixtureDef.shape = &LPlankShape;
+	LPlankFixtureDef.density = 1.0f;
+	LPlankFixtureDef.friction = 0.5f;
+	LPlankFixtureDef.restitution = 0.3f;
+	MSeesawPlank1->CreateFixture(&LPlankFixtureDef);
+	MSeesawPlank2->CreateFixture(&LPlankFixtureDef);
 
 	// Weld the two planks together
-	b2WeldJointDef weldJointDef;
-	weldJointDef.bodyA = MSeesawPlank1;
-	weldJointDef.bodyB = MSeesawPlank2;
-	weldJointDef.localAnchorA.Set(100.0f / MPixelsPerMetre, 0);  // Anchor at the end of the left plank
-	weldJointDef.localAnchorB.Set(-100.0f / MPixelsPerMetre, 0);  // Anchor at the end of the right plank
-	MSeesawWeldJoint = dynamic_cast<b2WeldJoint*>(MWorld.CreateJoint(&weldJointDef));
+	b2WeldJointDef LWeldJointDef;
+	LWeldJointDef.bodyA = MSeesawPlank1;
+	LWeldJointDef.bodyB = MSeesawPlank2;
+	LWeldJointDef.localAnchorA.Set(100.0f / MPixelsPerMetre, 0); // Anchor at the end of the left plank
+	LWeldJointDef.localAnchorB.Set(-100.0f / MPixelsPerMetre, 0); // Anchor at the end of the right plank
+	MPlankJoint = dynamic_cast<b2WeldJoint*>(MWorld.CreateJoint(&LWeldJointDef));
 
-	// Create the joint between base and plank1 (centered between the two planks)
-	b2RevoluteJointDef jointDef;
-	jointDef.bodyA = MSeesawBase;
-	jointDef.bodyB = MSeesawPlank1;
-	jointDef.localAnchorA.Set(0, -90.0f / MPixelsPerMetre);  // Attach at the tip of the triangle
-	jointDef.localAnchorB.Set(100.0f / MPixelsPerMetre, 0);  // Center of the combined plank structure
-	jointDef.enableLimit = true;
-	jointDef.lowerAngle = -0.25f * b2_pi;  // -45 degrees
-	jointDef.upperAngle = 0.25f * b2_pi;   // 45 degrees
+	// Create the joint between base and planks
+	b2RevoluteJointDef LJointDef;
+	LJointDef.bodyA = MSeesawBase;
+	LJointDef.bodyB = MSeesawPlank1;
+	LJointDef.localAnchorA.Set(0, -90.0f / MPixelsPerMetre); // Attach at the tip of the triangle
+	LJointDef.localAnchorB.Set(100.0f / MPixelsPerMetre, 0); // Center of the combined plank structure
+	LJointDef.enableLimit = true;
+	LJointDef.lowerAngle = -0.25f * b2_pi; // -45 degrees
+	LJointDef.upperAngle = 0.25f * b2_pi; // 45 degrees
 
-	MSeesawJoint = dynamic_cast<b2RevoluteJoint*>(MWorld.CreateJoint(&jointDef));
+	MSeesawJoint = dynamic_cast<b2RevoluteJoint*>(MWorld.CreateJoint(&LJointDef));
 }
 
-void Level1::initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& blockData) {
-	for (const auto& [pos, destructible, health] : blockData) {
-		Block block;
+void Level1::initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& BlockData)
+{
+	for (const auto& [pos, destructible, health] : BlockData)
+	{
+		Block LBlock;
 
 		// Set up the SFML rectangle shape
-		block.shape.setSize(sf::Vector2f(100.0f, 100.0f));
-		block.shape.setOrigin(50.0f, 50.0f);
-		block.shape.setTexture(destructible ? &MDestructibleBlockTexture : &MBlockTexture); // Use a different texture for destructible blocks
+		LBlock.MShape.setSize(sf::Vector2f(100.0f, 100.0f));
+		LBlock.MShape.setOrigin(50.0f, 50.0f);
+		LBlock.MShape.setTexture(destructible ? &MDestructibleBlockTexture : &MBlockTexture);
+		// Use a different texture for destructible blocks
 
 		// Set up Box2D body
-		b2BodyDef blockBodyDef;
-		blockBodyDef.type = b2_dynamicBody;
-		blockBodyDef.position.Set(pos.x / MPixelsPerMetre, pos.y / MPixelsPerMetre);
-		block.body = MWorld.CreateBody(&blockBodyDef);
+		b2BodyDef LBlockBodyDef;
+		LBlockBodyDef.type = b2_dynamicBody;
+		LBlockBodyDef.position.Set(pos.x / MPixelsPerMetre, pos.y / MPixelsPerMetre);
+		LBlock.MBody = MWorld.CreateBody(&LBlockBodyDef);
 
 		// Set up Box2D shape and fixture
-		b2PolygonShape blockPhysicsShape;
-		blockPhysicsShape.SetAsBox(50.0f / MPixelsPerMetre, 50.0f / MPixelsPerMetre);
+		b2PolygonShape LBlockPhysicsShape;
+		LBlockPhysicsShape.SetAsBox(50.0f / MPixelsPerMetre, 50.0f / MPixelsPerMetre);
 
-		b2FixtureDef blockFixtureDef;
-		blockFixtureDef.shape = &blockPhysicsShape;
-		blockFixtureDef.density = 1.0f;
-		blockFixtureDef.friction = 0.3f;
-		block.body->CreateFixture(&blockFixtureDef);
+		b2FixtureDef LBlockFixtureDef;
+		LBlockFixtureDef.shape = &LBlockPhysicsShape;
+		LBlockFixtureDef.density = 1.0f;
+		LBlockFixtureDef.friction = 0.3f;
+		LBlock.MBody->CreateFixture(&LBlockFixtureDef);
 
 		// Set destructible properties
-		block.isDestructible = destructible;
-		block.health = destructible ? health : -1;  // Non-destructible blocks have no health
+		LBlock.isDestructible = destructible;
+		LBlock.MHealth = destructible ? health : -1; // Non-destructible blocks have no health
 
-		// Add to vector
-		MBlocks.push_back(block);
+		MBlocks.push_back(LBlock);
 	}
 }
 
@@ -669,7 +694,7 @@ void Level1::initEnemies(const std::vector<sf::Vector2f>& Positions)
 	// Load enemy texture once for all enemies
 	if (!MEnemyTexture.loadFromFile("resources/kenney physics assets/PNG/Aliens/alienGreen_round.png"))
 	{
-		std::cerr << "Failed to load enemy texture!" << std::endl;
+		std::cerr << "Failed to load enemy texture!" << '\n';
 		return;
 	}
 
@@ -724,15 +749,14 @@ void Level1::spawnProjectile()
 		// Create a new projectile
 		b2BodyDef LProjectileBodyDef;
 		LProjectileBodyDef.type = b2_dynamicBody;
-		LProjectileBodyDef.position.Set(100.0f / MPixelsPerMetre, 700.0f / MPixelsPerMetre);  // Spawn at 700 units high
+		LProjectileBodyDef.position.Set(100.0f / MPixelsPerMetre, 700.0f / MPixelsPerMetre); // Spawn at 700 units high
 		LProjectileBodyDef.bullet = true;
 		MProjectileBody = MWorld.CreateBody(&LProjectileBodyDef);
 
-		// Add linear damping to slow down projectile over time (resistance)
 		MProjectileBody->SetLinearDamping(0.5f);
 
 		b2CircleShape LProjectileShapeDef;
-		LProjectileShapeDef.m_radius = 25.0f / MPixelsPerMetre; // Set radius of projectile
+		LProjectileShapeDef.m_radius = 25.0f / MPixelsPerMetre;
 
 		b2FixtureDef LProjectileFixtureDef;
 		LProjectileFixtureDef.shape = &LProjectileShapeDef;
@@ -783,46 +807,41 @@ void Level1::launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End
 }
 
 
-void Level1::calculateParabolicTrajectory(const sf::Vector2f& start, const sf::Vector2f& end)
+void Level1::calculateParabolicTrajectory(const sf::Vector2f& Start, const sf::Vector2f& End)
 {
-    // Clear previous trajectory points
-    MTrajectoryPoints.clear();
+	// Clear previous trajectory points
+	MTrajectoryPoints.clear();
 
-    // Start from projectile's current position
-    const sf::Vector2f LProjectilePosition = MProjectileShape.getPosition();
+	// Start from projectile's current position
+	const sf::Vector2f LProjectilePosition = MProjectileShape.getPosition();
 
-    // Calculate direction and velocity
-    const sf::Vector2f LDirection = start - end;
-    const float LVelocityX = (LDirection.x * 2.0f) / MPixelsPerMetre;  // Adjusted horizontal scaling factor
-    const float LVelocityY = (LDirection.y * 3.0f) / MPixelsPerMetre;  // Kept vertical scaling as before
+	// Calculate direction and velocity
+	const sf::Vector2f LDirection = Start - End;
+	const float LVelocityX = (LDirection.x * 2.0f) / MPixelsPerMetre;
+	const float LVelocityY = (LDirection.y * 3.0f) / MPixelsPerMetre;
 
-    const float LGravity = MWorld.GetGravity().y;
+	const float LGravity = MWorld.GetGravity().y;
 
-    constexpr int LNumPoints = 30;
-    constexpr float LTimeStep = 0.1f;
+	constexpr int LNumPoints = 30;
+	constexpr float LTimeStep = 0.1f;
 
-    for (int I = 0; I < LNumPoints; ++I)
-    {
-        const float T = static_cast<float>(I) * LTimeStep;
+	for (int I = 0; I < LNumPoints; ++I)
+	{
+		const float T = static_cast<float>(I) * LTimeStep;
 
-        // Calculate projectile position at time T
-        const float X = LVelocityX * T;
-        const float Y = LVelocityY * T + 0.5f * LGravity * T * T;
+		// Calculate projectile position at time T
+		const float X = LVelocityX * T;
+		const float Y = LVelocityY * T + 0.5f * LGravity * T * T;
 
-        sf::CircleShape LPoint(5.0f);
-        LPoint.setFillColor(sf::Color::Red);
-        LPoint.setPosition(
-            (LProjectilePosition.x / MPixelsPerMetre + X) * MPixelsPerMetre,
-            (LProjectilePosition.y / MPixelsPerMetre + Y) * MPixelsPerMetre
-        );
+		sf::CircleShape LPoint(5.0f);
+		LPoint.setFillColor(sf::Color::Red);
+		LPoint.setPosition(
+			(LProjectilePosition.x / MPixelsPerMetre + X) * MPixelsPerMetre,
+			(LProjectilePosition.y / MPixelsPerMetre + Y) * MPixelsPerMetre
+		);
 
-        MTrajectoryPoints.push_back(LPoint);
-
-        //// Stop at the peak to avoid overshooting (optional)
-        //if (I > 0 && MTrajectoryPoints[I].getPosition().y > MTrajectoryPoints[I - 1].getPosition().y) {
-        //    break;
-        //}
-    }
+		MTrajectoryPoints.push_back(LPoint);
+	}
 }
 
 void Level1::handleCollisions()
@@ -853,7 +872,7 @@ void Level1::handleCollisions()
 					{
 						Enemy.isAlive = false;
 						MWorld.DestroyBody(Enemy.MEnemyBody); // Destroy enemy body
-						std::cout << "Enemy killed by collision!" << std::endl;
+						std::cout << "Enemy killed by collision!" << '\n';
 					}
 				}
 			}

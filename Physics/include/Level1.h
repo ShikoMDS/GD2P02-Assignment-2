@@ -22,7 +22,14 @@ public:
 	void togglePause();
 
 private:
-	// Multiple enemy support (same type for now)
+	struct Block
+	{
+		sf::RectangleShape MShape;
+		b2Body* MBody;
+		bool isDestructible;
+		int MHealth;
+	};
+
 	struct Enemy
 	{
 		sf::Sprite MEnemySprite;
@@ -30,33 +37,8 @@ private:
 		bool isAlive;
 	};
 
-	std::vector<Enemy> MEnemies; // Store multiple enemies
-
-	struct Block {
-		sf::RectangleShape shape;
-		b2Body* body;
-		bool isDestructible;
-		int health;  // Health for destructible blocks
-	};
-
-	std::vector<Block> MBlocks;
-
-	b2Body* MSeesawBase;
-	b2Body* MSeesawPlank1;
-	b2Body* MSeesawPlank2;
-	b2RevoluteJoint* MSeesawJoint;
-	b2WeldJoint* MSeesawWeldJoint;
-
-	sf::Texture MSeesawBaseTexture;
-	sf::Texture MSeesawPlankTexture;
-	sf::Sprite MSeesawBaseSprite;
-	sf::Sprite MSeesawPlankSprite1;
-	sf::Sprite MSeesawPlankSprite2;
-
-
-	void initSeesaw();  // Function to initialize the seesaw
-	void initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& blockData);  // Vector includes position, destructibility, and health
-
+	void initSeesaw();
+	void initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& BlockData);
 	void initEnemies(const std::vector<sf::Vector2f>& Positions);
 	void spawnProjectile();
 	void launchProjectile(const sf::Vector2f& Start, const sf::Vector2f& End);
@@ -64,29 +46,41 @@ private:
 	void handleCollisions();
 	void checkEnemiesAlive();
 
-
-	b2World MWorld;
-	float MPixelsPerMetre, MStationaryTime, MScreenLeftBound, MScreenRightBound;
 	SceneManager& MSceneManager;
 
-	b2Body* MGroundBody;
-	b2Body* MProjectileBody;
+	b2World MWorld;
 
-	sf::CircleShape MProjectileShape; // Visual representation of projectile
-	sf::RectangleShape /*MBlockShape, */MDarkOverlay;
-	sf::Texture MBackgroundTexture, MGrassTexture, MBlockTexture, MDestructibleBlockTexture, MProjectileTexture, MEnemyTexture;
-	sf::Sprite MBackgroundSprite;
+	b2Body *MGroundBody, *MProjectileBody, *MSeesawBase, *MSeesawPlank1, *MSeesawPlank2;
 
-	sf::Font MFont;
-	sf::Text MResumeButton, MRestartButton, MMenuButton, MNextLevelButton;
+	b2RevoluteJoint* MSeesawJoint;
 
-	sf::Vector2f MDragStart, MDragEnd;
-	sf::VertexArray MDragLine; // Visual indicator for drag direction
-	std::vector<sf::CircleShape> MTrajectoryPoints; // Parabolic trajectory visualisation
+	b2WeldJoint* MPlankJoint;
 
-	std::vector<sf::Sprite> MGrassTiles;
+	float MPixelsPerMetre, MStationaryTime, MScreenLeftBound, MScreenRightBound;
+
+	int MRemainingProjectiles;
 
 	bool isPaused, PKeyPressed, isDragging, isProjectileLaunched, isProjectileStopped, isWin, isLose;
 
-	int MRemainingProjectiles;
+	std::vector<Block> MBlocks;
+	std::vector<Enemy> MEnemies;
+	std::vector<sf::CircleShape> MTrajectoryPoints;
+	std::vector<sf::Sprite> MGrassTiles;
+
+	sf::CircleShape MProjectileShape;
+
+	sf::Font MFont;
+
+	sf::RectangleShape MDarkOverlay;
+
+	sf::Sprite MBackgroundSprite, MSeesawBaseSprite, MSeesawPlankSprite1, MSeesawPlankSprite2;
+
+	sf::Text MResumeButton, MRestartButton, MMenuButton, MNextLevelButton;
+
+	sf::Texture MBackgroundTexture, MGrassTexture, MBlockTexture, MDestructibleBlockTexture, MProjectileTexture,
+	            MEnemyTexture, MSeesawBaseTexture, MSeesawPlankTexture;
+
+	sf::Vector2f MDragStart, MDragEnd;
+
+	sf::VertexArray MDragLine;
 };

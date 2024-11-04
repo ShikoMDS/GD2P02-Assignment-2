@@ -40,6 +40,21 @@ private:
 	};
 
 	std::vector<Block> MBlocks;
+
+	b2Body* MSeesawBase;
+	b2Body* MSeesawPlank1;
+	b2Body* MSeesawPlank2;
+	b2RevoluteJoint* MSeesawJoint;
+	b2WeldJoint* MSeesawWeldJoint;
+
+	sf::Texture MSeesawBaseTexture;
+	sf::Texture MSeesawPlankTexture;
+	sf::Sprite MSeesawBaseSprite;
+	sf::Sprite MSeesawPlankSprite1;
+	sf::Sprite MSeesawPlankSprite2;
+
+
+	void initSeesaw();  // Function to initialize the seesaw
 	void initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& blockData);  // Vector includes position, destructibility, and health
 
 	void initEnemies(const std::vector<sf::Vector2f>& Positions);

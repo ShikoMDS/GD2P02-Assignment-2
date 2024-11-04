@@ -136,10 +136,18 @@ void Level1::init()
 	// Add block data with destructible information
 	std::vector<std::tuple<sf::Vector2f, bool, int>> blockData = {
 		{ {800.0f, 800.0f}, true, 1 },   // Destructible block with health of 1
+		{ {425.0f, 600.0f}, true, 1 },     // Destructible block with health of 1
+		{ {575.0f, 600.0f}, true, 1 },     // Destructible block with health of 1
 		{ {900.0f, 800.0f}, true, 1 },     // Destructible block with health of 1
-		{ {1000.0f, 400.0f}, false, -1 }     // Regular block
+		{ {1000.0f, 800.0f}, false, -1 },     // Regular block
+		{ {450.0f, 505.0f}, false, -1 },     // Regular block
+		{ {550.0f, 505.0f}, false, -1 },     // Regular block
+		{ {425.0f, 695.0f}, false, -1 },     // Regular block
+		{ {575.0f, 695.0f}, false, -1 }     // Regular block
 	};
 	initBlocks(blockData);
+
+	initSeesaw();  // Initialize seesaw here
 
 	MRemainingProjectiles = 3; // Set number of projectiles
 
@@ -161,6 +169,11 @@ void Level1::draw(sf::RenderWindow& Window)
 	for (const auto& block : MBlocks) {
 		Window.draw(block.shape);
 	}
+
+	// Draw seesaw components
+	Window.draw(MSeesawBaseSprite);
+	Window.draw(MSeesawPlankSprite1);
+	Window.draw(MSeesawPlankSprite2);
 
 	// Draw projectile if it's not removed
 	if (!isProjectileStopped)
@@ -345,6 +358,26 @@ void Level1::update(const float DeltaTime) {
 			++it;
 		}
 
+		// Update and draw seesaw components
+		if (MSeesawBase && MSeesawPlank1 && MSeesawPlank2)
+		{
+			// Update base position
+			b2Vec2 basePos = MSeesawBase->GetPosition();
+			MSeesawBaseSprite.setPosition(basePos.x * MPixelsPerMetre, basePos.y * MPixelsPerMetre);
+
+			// Update plank 1 position and rotation
+			b2Vec2 plank1Pos = MSeesawPlank1->GetPosition();
+			float plank1Angle = MSeesawPlank1->GetAngle();
+			MSeesawPlankSprite1.setPosition(plank1Pos.x * MPixelsPerMetre, plank1Pos.y * MPixelsPerMetre);
+			MSeesawPlankSprite1.setRotation(plank1Angle * 180.0f / b2_pi);
+
+			// Update plank 2 position and rotation
+			b2Vec2 plank2Pos = MSeesawPlank2->GetPosition();
+			float plank2Angle = MSeesawPlank2->GetAngle();
+			MSeesawPlankSprite2.setPosition(plank2Pos.x * MPixelsPerMetre, plank2Pos.y * MPixelsPerMetre);
+			MSeesawPlankSprite2.setRotation(plank2Angle * 180.0f / b2_pi);
+		}
+
 		// Remaining projectile update and collision handling
 		if (isProjectileLaunched && !isProjectileStopped) {
 			b2Vec2 velocity = MProjectileBody->GetLinearVelocity();
@@ -510,6 +543,91 @@ void Level1::updateButtonPositions(const sf::Vector2u& WindowSize)
 void Level1::togglePause()
 {
 	isPaused = !isPaused;
+}
+
+void Level1::initSeesaw()
+{
+	// Load textures for the base and plank
+	if (!MSeesawBaseTexture.loadFromFile("resources/kenney physics assets/PNG/Metal elements/elementMetal000.png") ||
+		!MSeesawPlankTexture.loadFromFile("resources/kenney physics assets/PNG/Metal elements/elementMetal013.png"))
+	{
+		// Handle texture loading failure
+		return;
+	}
+
+	// Set up base sprite
+	MSeesawBaseSprite.setTexture(MSeesawBaseTexture);
+	MSeesawBaseSprite.setOrigin(MSeesawBaseSprite.getLocalBounds().width / 2, MSeesawBaseSprite.getLocalBounds().height);
+	MSeesawBaseSprite.setPosition(500.0f, 850.0f);  // Adjusted position
+
+	// Define base body in Box2D
+	b2BodyDef baseBodyDef;
+	baseBodyDef.position.Set(500.0f / MPixelsPerMetre, 850.0f / MPixelsPerMetre);
+	MSeesawBase = MWorld.CreateBody(&baseBodyDef);
+
+	b2PolygonShape baseShape;
+	b2Vec2 vertices[3];
+	vertices[0].Set(0, -30.0f / MPixelsPerMetre);   // Top of the triangle (upwards in screen space)
+	vertices[1].Set(-30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre);  // Bottom left
+	vertices[2].Set(30.0f / MPixelsPerMetre, 30.0f / MPixelsPerMetre);   // Bottom right
+	baseShape.Set(vertices, 3);
+
+	b2FixtureDef baseFixtureDef;
+	baseFixtureDef.shape = &baseShape;
+	baseFixtureDef.density = 1.0f;
+	baseFixtureDef.friction = 0.5f;
+	MSeesawBase->CreateFixture(&baseFixtureDef);
+
+	// Set up plank sprites with the same texture
+	MSeesawPlankSprite1.setTexture(MSeesawPlankTexture);
+	MSeesawPlankSprite1.setOrigin(MSeesawPlankSprite1.getLocalBounds().width / 2, MSeesawPlankSprite1.getLocalBounds().height / 2);
+
+	MSeesawPlankSprite2.setTexture(MSeesawPlankTexture);
+	MSeesawPlankSprite2.setOrigin(MSeesawPlankSprite2.getLocalBounds().width / 2, MSeesawPlankSprite2.getLocalBounds().height / 2);
+
+	// Define the two plank bodies in Box2D
+	b2BodyDef plank1BodyDef;
+	plank1BodyDef.type = b2_dynamicBody;
+	plank1BodyDef.position.Set((500.0f - 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre);  // Left plank
+	MSeesawPlank1 = MWorld.CreateBody(&plank1BodyDef);
+
+	b2BodyDef plank2BodyDef;
+	plank2BodyDef.type = b2_dynamicBody;
+	plank2BodyDef.position.Set((500.0f + 100.0f) / MPixelsPerMetre, 780.0f / MPixelsPerMetre);  // Right plank
+	MSeesawPlank2 = MWorld.CreateBody(&plank2BodyDef);
+
+	// Define plank shapes
+	b2PolygonShape plankShape;
+	plankShape.SetAsBox(100.0f / MPixelsPerMetre, 10.0f / MPixelsPerMetre);  // Each plank is half the full length
+
+	// Create fixtures for each plank
+	b2FixtureDef plankFixtureDef;
+	plankFixtureDef.shape = &plankShape;
+	plankFixtureDef.density = 1.0f;
+	plankFixtureDef.friction = 0.5f;
+	plankFixtureDef.restitution = 0.3f;  // Optional, add bounce if desired
+	MSeesawPlank1->CreateFixture(&plankFixtureDef);
+	MSeesawPlank2->CreateFixture(&plankFixtureDef);
+
+	// Weld the two planks together
+	b2WeldJointDef weldJointDef;
+	weldJointDef.bodyA = MSeesawPlank1;
+	weldJointDef.bodyB = MSeesawPlank2;
+	weldJointDef.localAnchorA.Set(100.0f / MPixelsPerMetre, 0);  // Anchor at the end of the left plank
+	weldJointDef.localAnchorB.Set(-100.0f / MPixelsPerMetre, 0);  // Anchor at the end of the right plank
+	MSeesawWeldJoint = dynamic_cast<b2WeldJoint*>(MWorld.CreateJoint(&weldJointDef));
+
+	// Create the joint between base and plank1 (centered between the two planks)
+	b2RevoluteJointDef jointDef;
+	jointDef.bodyA = MSeesawBase;
+	jointDef.bodyB = MSeesawPlank1;
+	jointDef.localAnchorA.Set(0, -90.0f / MPixelsPerMetre);  // Attach at the tip of the triangle
+	jointDef.localAnchorB.Set(100.0f / MPixelsPerMetre, 0);  // Center of the combined plank structure
+	jointDef.enableLimit = true;
+	jointDef.lowerAngle = -0.25f * b2_pi;  // -45 degrees
+	jointDef.upperAngle = 0.25f * b2_pi;   // 45 degrees
+
+	MSeesawJoint = dynamic_cast<b2RevoluteJoint*>(MWorld.CreateJoint(&jointDef));
 }
 
 void Level1::initBlocks(const std::vector<std::tuple<sf::Vector2f, bool, int>>& blockData) {
